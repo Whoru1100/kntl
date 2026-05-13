@@ -294,8 +294,12 @@
         async function updateStatusPesanan() {
             if (myOrderIds.length === 0) return;
             try {
-                const res = await fetch('/monitor');
-                const data = await res.json();
+                const resMonitor = await fetch('/monitor');
+                const data = await resMonitor.json();
+                
+                const resPanggil = await fetch('/cek_panggilan');
+                const dataPanggil = await resPanggil.json();
+
                 const container = document.getElementById('order-status-container');
                 
                 let htmlContent = "";
@@ -306,7 +310,12 @@
                     const orderSelesai = data.selesai.find(o => String(o.id) === myId);
 
                     if (orderAktif) {
-                        listTampil.push({ data: orderAktif, label: "DIPROSES", bg: "#fff3e0", warna: "#e67e22" });
+                        // LOGIKA BARU: Jika sedang dipanggil, ganti label jadi Hijau
+                        if (String(dataPanggil.panggil_id) === myId) {
+                            listTampil.push({ data: orderAktif, label: "DIPANGGIL", bg: "#e8f5e9", warna: "#27ae60" });
+                        } else {
+                            listTampil.push({ data: orderAktif, label: "DIPROSES", bg: "#fff3e0", warna: "#e67e22" });
+                        }
                     } else if (orderSelesai) {
                         listTampil.push({ data: orderSelesai, label: "SIAP DIAMBIL", bg: "#e8f5e9", warna: "#27ae60" });
                     }
