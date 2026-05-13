@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cafe Fairuz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { 
+            --primary: #6F4E37; --accent: #f39c12; --border: #E0D7D0; 
+            --bg: #fdfaf7; --white: #ffffff; --text: #333;
+            --success: #27ae60;
+            --ojol-color: #00AA13;
+        }
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: var(--text); 
+            min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
+        }
+
+        .navbar { 
+            background: var(--primary); color: var(--white); 
+            padding: 30px 20px 60px; text-align: center;
+            border-radius: 0 0 50% 50% / 0 0 20px 20px;
+            position: relative; z-index: 1;
+        }
+        .navbar h1 { margin: 0; font-size: 1.5rem; letter-spacing: 1px; }
+
+        #main-app { 
+            padding: 0 15px 120px; margin-top: -30px; 
+            position: relative; z-index: 10;
+            display: flex; justify-content: center;
+        }
+        
+        .container { width: 100%; max-width: 450px; }
+
+        .card { 
+            background: var(--white); padding: 20px; border-radius: 24px; 
+            border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+            margin-bottom: 20px;
+        }
+
+        .card h3 { 
+            margin: 0 0 15px 0; font-size: 0.9rem; color: var(--primary); 
+            text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #eee; padding-bottom: 10px;
+        }
+
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .menu-card { 
+            background: var(--white); border: 1px solid var(--border); 
+            border-radius: 18px; overflow: hidden; cursor: pointer; transition: 0.2s;
+        }
+        .menu-card:active { transform: scale(0.96); }
+        .menu-card img { width: 100%; height: 110px; object-fit: cover; }
+        .menu-info { padding: 10px; text-align: center; }
+        .menu-info b { display: block; font-size: 0.85rem; }
+        .menu-info span { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+        
+        .cart-item { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 0; border-bottom: 1px dashed #ddd;
+        }
+        .item-info { display: flex; flex-direction: column; gap: 2px; }
+        .item-info b { font-size: 0.9rem; }
+        .item-info span { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+
+        .qty-controls { display: flex; align-items: center; gap: 12px; background: #f5f0ed; padding: 5px 10px; border-radius: 12px; }
+        .btn-qty { border: none; background: none; color: var(--primary); font-weight: bold; font-size: 1.2rem; cursor: pointer; padding: 0 5px; }
+        .qty-val { font-size: 0.9rem; font-weight: 600; min-width: 15px; text-align: center; }
+
+        select, input { 
+            width: 100%; padding: 12px 15px; border-radius: 12px; 
+            border: 1px solid var(--border); font-family: inherit; font-size: 0.9rem;
+            background: #fff; outline: none; margin-bottom: 10px;
+        }
+
+        .sched-box { 
+            background: #f9f6f4; padding: 15px; border-radius: 15px; 
+            border: 1px solid var(--border); margin-bottom: 10px;
+            display: none; animation: fadeIn 0.3s;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-pay { 
+            background: var(--accent); color: var(--white); width: 100%; padding: 16px; 
+            border: none; border-radius: 15px; font-weight: bold; cursor: pointer; 
+            margin-top: 10px; font-size: 1rem; box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+        }
+        .btn-pay:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+
+        .status-badge { padding: 4px 10px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
+
+        .tag-ojol {
+            display: inline-block; margin-top: 4px; font-size: 0.65rem; font-weight: bold;
+            color: var(--ojol-color); background: rgba(0, 170, 19, 0.1); padding: 2px 6px; border-radius: 5px;
+        }
+
+        .waves-container { 
+            position: fixed; bottom: 0; width: 100%; height: 15vh; min-height: 100px; max-height: 150px;
+            pointer-events: none; z-index: 0; 
+        }
+        .waves { position: relative; width: 100%; height: 100%; margin-bottom: -7px; }
+        .parallax > use { animation: move-forever 25s cubic-bezier(.55,.5,.45,.5) infinite; }
+        .parallax > use:nth-child(1) { animation-delay: -2s; animation-duration: 7s; }
+        .parallax > use:nth-child(2) { animation-delay: -3s; animation-duration: 10s; }
+        .parallax > use:nth-child(3) { animation-delay: -4s; animation-duration: 13s; }
+        .parallax > use:nth-child(4) { animation-delay: -5s; animation-duration: 20s; }
+
+        @keyframes move-forever { 
+            0% { transform: translate3d(-90px,0,0); } 
+            100% { transform: translate3d(85px,0,0); } 
+        }
+
+        #login-screen { 
+            position: fixed; inset: 0; background: var(--primary); 
+            z-index: 1000; display: flex; align-items: center; justify-content: center; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div style="background:#fff; padding:40px; border-radius:35px; text-align:center; width:90%; max-width:360px;">
+            <h2 style="color:var(--primary); margin:0;">☕ Cafe Fairuz</h2>
+            <p style="color:#777; margin-bottom:25px;">Selamat datang di Cafe Fairuz</p>
+            <button class="btn-pay" onclick="start()" style="margin:0">MULAI PESAN</button>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <h1>Cafe Fairuz</h1>
+    </nav>
+
+    <div id="main-app">
+        <div class="container">
+            <div class="card">
+                <h3>🛒 Pilihan Menu</h3>
+                <div class="menu-grid">
+                    <div class="menu-card" onclick="add('Kopi Aren', 15000)">
+                        <img src="/static/img/kopi_aren.jpg" onerror="this.src='https://via.placeholder.com/150?text=Kopi+Aren'">
+                        <div class="menu-info"><b>Kopi Aren</b><span>15rb</span></div>
+                    </div>
+                    <div class="menu-card" onclick="add('Kopi Susu', 12000)">
+                        <img src="/static/img/kopi_susu.jpg" onerror="this.src='https://via.placeholder.com/150?text=Kopi+Susu'">
+                        <div class="menu-info"><b>Kopi Susu</b><span>12rb</span></div>
+                    </div>
+                    <div class="menu-card" onclick="add('Blue Lagoon', 20000)">
+                        <img src="/static/img/blue_lagon.jpg" onerror="this.src='https://via.placeholder.com/150?text=Kopi+Susu'">
+                        <div class="menu-info"><b>Blue Lagoon</b><span>20rb</span></div>
+                    </div>
+                </div>
+
+                <div id="cart-list"></div>
+
+                <div class="form-group" style="margin-top:15px;">
+                    <select id="asal" onchange="toggleSched()">
+                        <option value="">-- Pilih Opsi Pesanan --</option>
+                        <option value="Walk-in">🚶 Walk-In</option>
+                        <option value="Jadwal">📅 Web (Penjadwalan)</option>
+                        <option value="Ojol">🛵 Ojek Online</option>
+                    </select>
+
+                    <div id="sched-box" class="sched-box">
+                        <small style="display:block; margin-bottom:5px; color:var(--primary); font-weight:600;">Atur Waktu Ambil:</small>
+                        <div style="display:flex; gap:10px;">
+                            <input type="time" id="sched-time">
+                            <input type="date" id="sched-date">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 2px solid var(--bg);">
+                    <span>Total:</span>
+                    <b id="total-txt" style="font-size: 1.2rem; color: var(--primary);">Rp 0</b>
+                </div>
+                
+                <button class="btn-pay" id="btn-pay" onclick="pay()" disabled>KONFIRMASI PESANAN</button>
+            </div>
+
+            <div id="order-status-container"></div>
+        </div>
+    </div>
+
+    <div class="waves-container">
+        <svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 24 150 28" preserveAspectRatio="none" shape-rendering="auto">
+            <defs><path id="gentle-wave" d="M-160 44c30 0 58-18 88-18s 58 18 88 18 58-18 88-18 58 18 88 18 v44h-352z" /></defs>
+            <g class="parallax">
+                <use href="#gentle-wave" x="48" y="0" fill="rgba(111, 78, 55, 0.7)" />
+                <use href="#gentle-wave" x="48" y="3" fill="rgba(111, 78, 55, 0.5)" />
+                <use href="#gentle-wave" x="48" y="5" fill="rgba(111, 78, 55, 0.3)" />
+                <use href="#gentle-wave" x="48" y="7" fill="rgba(111, 78, 55, 0.1)" />
+            </g>
+        </svg>
+    </div>
+
+    <script>
+        let cart = [];
+        let myOrderIds = JSON.parse(localStorage.getItem('my_orders') || "[]");
+        
+        let audioPlayer = new Audio();
+        let lastCallTimestamp = Number(localStorage.getItem('last_call_time')) || 0; 
+
+        function start() {
+            audioPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+            audioPlayer.play().catch(e => {});
+
+            document.getElementById('login-screen').style.display = 'none';
+            updateStatusPesanan();
+        }
+
+        function add(n, h) {
+            let i = cart.find(x => x.n === n);
+            i ? i.q++ : cart.push({n, h, q: 1});
+            render();
+        }
+
+        function changeQty(n, delta) {
+            let i = cart.find(x => x.n === n);
+            if (i) {
+                i.q += delta;
+                if (i.q <= 0) cart = cart.filter(x => x.n !== n);
+                render();
+            }
+        }
+
+        function toggleSched() {
+            const val = document.getElementById('asal').value;
+            document.getElementById('sched-box').style.display = (val === 'Jadwal') ? 'block' : 'none';
+            render();
+        }
+
+        function render() {
+            let total = 0;
+            const list = document.getElementById('cart-list');
+            if(cart.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:#ccc; font-size:0.8rem; margin:10px 0;">Belum ada menu yang dipilih</p>';
+            } else {
+                list.innerHTML = cart.map(i => {
+                    total += (i.h * i.q);
+                    return `<div class="cart-item">
+                        <div class="item-info"><b>${i.n}</b><span>Rp ${(i.h * i.q).toLocaleString()}</span></div>
+                        <div class="qty-controls">
+                            <button class="btn-qty" onclick="changeQty('${i.n}', -1)">−</button>
+                            <span class="qty-val">${i.q}</span>
+                            <button class="btn-qty" onclick="changeQty('${i.n}', 1)">+</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('total-txt').innerText = "Rp " + total.toLocaleString();
+            document.getElementById('btn-pay').disabled = cart.length === 0 || document.getElementById('asal').value === "";
+        }
+
+        async function pay() {
+            const asal = document.getElementById('asal').value;
+            let waktuInfo = "Langsung";
+            if(asal === 'Jadwal') {
+                const time = document.getElementById('sched-time').value;
+                const date = document.getElementById('sched-date').value;
+                if(!time || !date) return Swal.fire('Oops', 'Lengkapi waktu pengambilan!', 'warning');
+                waktuInfo = `Tgl ${date} Jam ${time}`;
+            }
+
+            const payload = {
+                item: cart.map(i => `${i.q} ${i.n}`).join(', '),
+                asal: asal,
+                waktu: waktuInfo
+            };
+
+            try {
+                const res = await fetch('/checkout', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify(payload) 
+                });
+                const result = await res.json();
+                myOrderIds.push(String(result.id));
+                localStorage.setItem('my_orders', JSON.stringify(myOrderIds));
+                Swal.fire({
+                    title: 'Pesanan Disimpan!',
+                    text: 'Nomor Antrean: ' + String(result.id).slice(-3),
+                    icon: 'success',
+                    confirmButtonColor: '#6F4E37'
+                });
+                cart = []; render();
+                updateStatusPesanan();
+            } catch(e) {
+                Swal.fire('Error', 'Gagal mengirim pesanan', 'error');
+            }
+        }
+
+        async function updateStatusPesanan() {
+            if (myOrderIds.length === 0) return;
+            try {
+                const res = await fetch('/monitor');
+                const data = await res.json();
+                const container = document.getElementById('order-status-container');
+                
+                let htmlContent = "";
+                let listTampil = [];
+
+                myOrderIds.forEach(myId => {
+                    const orderAktif = data.antrean.find(o => String(o.id) === myId);
+                    const orderSelesai = data.selesai.find(o => String(o.id) === myId);
+
+                    if (orderAktif) {
+                        listTampil.push({ data: orderAktif, label: "DIPROSES", bg: "#fff3e0", warna: "#e67e22" });
+                    } else if (orderSelesai) {
+                        listTampil.push({ data: orderSelesai, label: "SIAP DIAMBIL", bg: "#e8f5e9", warna: "#27ae60" });
+                    }
+                });
+
+                if (listTampil.length > 0) {
+                    listTampil.forEach(item => {
+                        htmlContent += renderStatusItem(item.data, item.label, item.bg, item.warna);
+                    });
+                    container.innerHTML = `<div class="card" style="border-top: 4px solid var(--accent);"><h3>📋 Status Pesanan</h3>${htmlContent}</div>`;
+                } else {
+                    container.innerHTML = '';
+                }
+            } catch(e) {}
+        }
+
+        function renderStatusItem(o, teks, bg, warna) {
+            const priorityLabel = (o.asal === 'Ojol') ? '<div class="tag-ojol">Prioritas Driver Ojek Online</div>' : '';
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee;">
+                    <div>
+                        <b style="font-size:0.8rem;">#${String(o.id).slice(-3)}</b>
+                        <div style="font-size:0.75rem; color:#666;">${o.item}</div>
+                        ${priorityLabel}
+                    </div>
+                    <span class="status-badge" style="background:${bg}; color:${warna};">${teks}</span>
+                </div>`;
+        }
+
+        async function pantauPanggilan() {
+            try {
+                const res = await fetch('/cek_panggilan?t=' + Date.now());
+                const data = await res.json();
+                
+                if (data.panggil_id && Number(data.updated_at) > lastCallTimestamp) {
+                    
+                    lastCallTimestamp = Number(data.updated_at); 
+                    localStorage.setItem('last_call_time', lastCallTimestamp);
+
+                    audioPlayer.pause();
+                    audioPlayer.currentTime = 0;
+
+                    const menuDipilih = data.panggil_item || "pesanan Anda"; 
+                    const teksPanggilan = `Nomor antrean ${String(data.panggil_id).slice(-3)}, silakan ambil ${menuDipilih}`;
+                    
+                    audioPlayer.src = `/get_audio/${encodeURIComponent(teksPanggilan)}`;
+                    audioPlayer.play().catch(e => console.log("Audio play blocked"));
+                    
+                    if (myOrderIds.includes(String(data.panggil_id))) {
+                        Swal.fire({
+                            title: "PESANAN SIAP!",
+                            text: `Nomor Antrean #${String(data.panggil_id).slice(-3)} silakan ambil ${menuDipilih}`,
+                            icon: "info",
+                            timer: 7000,
+                            confirmButtonColor: '#6F4E37'
+                        });
+                    }
+                }
+                updateStatusPesanan();
+            } catch(e) {}
+        }
+
+        setInterval(pantauPanggilan, 3000); 
+    </script>
+</body>
+</html>

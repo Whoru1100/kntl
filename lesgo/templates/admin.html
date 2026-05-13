@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Cafe Fairuz</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root { 
+            --primary: #6F4E37; --accent: #f39c12; --bg: #fdfaf7; 
+            --white: #ffffff; --success: #27ae60; --error: #e74c3c;
+        }
+        
+        body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: #333; }
+
+        .navbar { 
+            background: var(--primary); color: var(--white); padding: 20px; 
+            text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .container { max-width: 900px; margin: 30px auto; padding: 0 15px; }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: var(--white); padding: 20px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .stat-card h2 { margin: 5px 0; color: var(--primary); }
+
+        .admin-card { background: var(--white); padding: 25px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        
+        .q-item { 
+            padding: 15px; background: #fff; border-radius: 20px; margin-bottom: 12px; 
+            border: 1.5px solid #f0f0f0; display: flex; align-items: center; gap: 15px;
+            transition: 0.3s;
+        }
+
+        .q-badge { 
+            background: var(--primary); color: white; min-width: 60px; height: 60px; 
+            border-radius: 12px; display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 1.2rem;
+        }
+
+        .info { flex: 1; }
+        .info b { display: block; font-size: 1rem; color: #333; }
+        .info small { color: #888; font-size: 0.8rem; }
+
+        .btn-group { display: flex; gap: 10px; }
+        .btn { border: none; border-radius: 12px; cursor: pointer; padding: 12px; font-weight: bold; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-call { background: var(--accent); color: white; font-size: 1.4rem; width: 50px; }
+        .btn-done { background: var(--success); color: white; padding: 0 20px; }
+        .btn-del { background: var(--error); color: white; padding: 0 20px; }
+        .btn:active { transform: scale(0.9); }
+
+        .empty-state { text-align: center; padding: 30px; color: #ccc; font-size: 0.9rem; }
+        h3 { color: var(--primary); display: flex; align-items: center; gap: 10px; margin-top: 0; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <h1>🛠️ Dashboard Admin - Cafe Fairuz</h1>
+    </nav>
+
+    <div class="container">
+        <div class="stat-grid">
+            <div class="stat-card">
+                <small>Antrean Aktif</small>
+                <h2 id="count-active">0</h2>
+            </div>
+            <div class="stat-card">
+                <small>Siap Diambil</small>
+                <h2 id="count-done" style="color: var(--success);">0</h2>
+            </div>
+        </div>
+
+        <div class="admin-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h3>⏳ Antrean Aktif</h3>
+                <button onclick="refresh()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:bold;">🔄 REFRESH</button>
+            </div>
+            <div id="admin-list"></div>
+        </div>
+
+        <div class="admin-card" style="border: 2px solid #e8f5e9;">
+            <h3>✅ Siap Diambil / Selesai</h3>
+            <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Klik <b>Hapus</b> jika pelanggan sudah mengambil pesanannya agar tidak menumpuk di HP pelanggan.</p>
+            <div id="done-list"></div>
+        </div>
+    </div>
+
+    <script>
+        async function refresh() {
+            try {
+                const res = await fetch('/monitor?t=' + Date.now());
+                const data = await res.json();
+                
+                document.getElementById('count-active').innerText = data.antrean.length;
+                document.getElementById('count-done').innerText = data.selesai.length;
+                
+                // Render Antrean Aktif
+                const list = document.getElementById('admin-list');
+                if (!data.antrean || data.antrean.length === 0) {
+                    list.innerHTML = '<div class="empty-state">Belum ada pesanan masuk.</div>';
+                } else {
+                    list.innerHTML = data.antrean.map(o => `
+                        <div class="q-item">
+                            <div class="q-badge">${String(o.id).slice(-3)}</div>
+                            <div class="info">
+                                <b>${o.item}</b>
+                                <small>${o.asal} • 🕒 ${o.waktu || 'Langsung'}</small>
+                            </div>
+                            <div class="btn-group">
+                                <button onclick='callCustomer(${JSON.stringify(o)})' class="btn btn-call">📢</button>
+                                <button onclick="markDone('${o.id}')" class="btn btn-done">SELESAI</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                // Render Daftar Selesai (SIAP AMBIL)
+                const doneList = document.getElementById('done-list');
+                if (!data.selesai || data.selesai.length === 0) {
+                    doneList.innerHTML = '<div class="empty-state">Tidak ada pesanan yang siap diambil.</div>';
+                } else {
+                    doneList.innerHTML = data.selesai.map(o => `
+                        <div class="q-item" style="border-left: 5px solid var(--success);">
+                            <div class="q-badge" style="background: #999;">${String(o.id).slice(-3)}</div>
+                            <div class="info">
+                                <b>${o.item}</b>
+                                <small style="color: var(--success); font-weight:bold;">Pelanggan melihat status "SIAP"</small>
+                            </div>
+                            <button onclick="deletePermanent('${o.id}')" class="btn btn-del">HAPUS</button>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) { console.error("Error refresh:", e); }
+        }
+
+        async function callCustomer(order) {
+            await fetch('/panggil', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id: order.id })
+            });
+            Swal.fire({ title: 'Memanggil...', timer: 800, showConfirmButton: false, toast: true, position: 'top-end', icon: 'success' });
+        }
+
+        async function markDone(id) {
+            await fetch('/selesai', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: parseInt(id)})
+            });
+            refresh();
+        }
+
+        async function deletePermanent(id) {
+            const result = await Swal.fire({
+                title: 'Hapus Pesanan?',
+                text: "Data akan hilang dari sistem dan HP pelanggan.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                confirmButtonText: 'Ya, Hapus!'
+            });
+
+            if (result.isConfirmed) {
+                await fetch('/delete_permanent', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: parseInt(id)})
+                });
+                refresh();
+            }
+        }
+
+        setInterval(refresh, 5000);
+        refresh();
+    </script>
+</body>
+</html>
