@@ -1,6 +1,4 @@
-Install librarynya dulu
-
-- python -m pip install flask flask-cors gtts pygame | (buat suara AI nya)
+Install librarynya dulu : python -m pip install flask flask-cors gtts pygame | (buat suara AI nya)
 
 ==========
 
