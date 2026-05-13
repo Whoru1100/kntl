@@ -201,6 +201,7 @@
         
         let audioPlayer = new Audio();
         let lastCallTimestamp = Number(localStorage.getItem('last_call_time')) || 0; 
+        let isCalling = false; 
 
         function start() {
             audioPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
@@ -289,7 +290,7 @@
                     confirmButtonColor: '#6F4E37'
                 });
 
-               
+                
                 cart = []; 
                 asalSelect.value = ""; 
                 document.getElementById('sched-box').style.display = 'none';
@@ -372,23 +373,28 @@
         }
 
         async function pantauPanggilan() {
+            if (isCalling) return; 
+
             try {
                 const res = await fetch('/cek_panggilan?t=' + Date.now());
                 const data = await res.json();
                 
                 if (data.panggil_id && Number(data.updated_at) > lastCallTimestamp) {
+                    isCalling = true; 
                     lastCallTimestamp = Number(data.updated_at); 
                     localStorage.setItem('last_call_time', lastCallTimestamp);
-
-                    audioPlayer.pause();
-                    audioPlayer.currentTime = 0;
 
                     const menuDipilih = data.panggil_item || "pesanan Anda"; 
                     const teksPanggilan = `Nomor antrean ${String(data.panggil_id).slice(-3)}, silakan ambil ${menuDipilih}`;
                     
                     audioPlayer.src = `/get_audio/${encodeURIComponent(teksPanggilan)}`;
-                    audioPlayer.play().catch(e => console.log("Audio play blocked"));
+                    audioPlayer.play().catch(e => {
+                        isCalling = false;
+                    });
+
                     
+                    audioPlayer.onended = () => { isCalling = false; };
+
                     if (myOrderIds.includes(String(data.panggil_id))) {
                         Swal.fire({
                             title: "PESANAN SIAP!",
@@ -400,7 +406,7 @@
                     }
                 }
                 updateStatusPesanan();
-            } catch(e) {}
+            } catch(e) { isCalling = false; }
         }
 
         setInterval(pantauPanggilan, 3000); 
