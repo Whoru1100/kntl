@@ -10,6 +10,7 @@
         :root { 
             --primary: #6F4E37; --accent: #f39c12; --bg: #fdfaf7; 
             --white: #ffffff; --success: #27ae60; --error: #e74c3c;
+            --ojol-color: #00AA13;
         }
         
         body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: #333; }
@@ -33,6 +34,8 @@
             transition: 0.3s;
         }
 
+        .q-item.is-ojol { border-left: 6px solid var(--ojol-color); background: #f0fff1; }
+
         .q-badge { 
             background: var(--primary); color: white; min-width: 60px; height: 60px; 
             border-radius: 12px; display: flex; align-items: center; justify-content: center; 
@@ -42,6 +45,18 @@
         .info { flex: 1; }
         .info b { display: block; font-size: 1rem; color: #333; }
         .info small { color: #888; font-size: 0.8rem; }
+
+        .call-counter {
+            font-size: 0.75rem; color: var(--accent); font-weight: bold;
+            display: inline-block; margin-top: 5px; background: rgba(243, 156, 18, 0.1);
+            padding: 2px 8px; border-radius: 5px;
+        }
+
+        .tag-ojol {
+            display: inline-block; font-size: 0.7rem; font-weight: bold;
+            color: var(--ojol-color); background: rgba(0, 170, 19, 0.1); 
+            padding: 2px 8px; border-radius: 5px; margin-top: 5px; margin-right: 5px;
+        }
 
         .btn-group { display: flex; gap: 10px; }
         .btn { border: none; border-radius: 12px; cursor: pointer; padding: 12px; font-weight: bold; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
@@ -82,12 +97,14 @@
 
         <div class="admin-card" style="border: 2px solid #e8f5e9;">
             <h3>✅ Siap Diambil / Selesai</h3>
-            <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Klik <b>Hapus</b> jika pelanggan sudah mengambil pesanannya agar tidak menumpuk di HP pelanggan.</p>
             <div id="done-list"></div>
         </div>
     </div>
 
     <script>
+        // Objek untuk menyimpan jumlah panggilan di sisi client (sementara)
+        let callCounts = {};
+
         async function refresh() {
             try {
                 const res = await fetch('/monitor?t=' + Date.now());
@@ -96,27 +113,37 @@
                 document.getElementById('count-active').innerText = data.antrean.length;
                 document.getElementById('count-done').innerText = data.selesai.length;
                 
-                // Render Antrean Aktif
+                let sortedAntrean = data.antrean.map(o => ({
+                    ...o,
+                    priority: o.asal === 'Ojol' ? 1 : 2
+                })).sort((a, b) => a.priority - b.priority);
+
                 const list = document.getElementById('admin-list');
-                if (!data.antrean || data.antrean.length === 0) {
+                if (!sortedAntrean || sortedAntrean.length === 0) {
                     list.innerHTML = '<div class="empty-state">Belum ada pesanan masuk.</div>';
                 } else {
-                    list.innerHTML = data.antrean.map(o => `
-                        <div class="q-item">
-                            <div class="q-badge">${String(o.id).slice(-3)}</div>
+                    list.innerHTML = sortedAntrean.map(o => {
+                        
+                        const count = callCounts[o.id] || 0;
+                        const callText = count > 0 ? `<span class="call-counter">📢 Sudah dipanggil ${count}x</span>` : '';
+
+                        return `
+                        <div class="q-item ${o.asal === 'Ojol' ? 'is-ojol' : ''}">
+                            <div class="q-badge" style="${o.asal === 'Ojol' ? 'background: var(--ojol-color);' : ''}">${String(o.id).slice(-3)}</div>
                             <div class="info">
                                 <b>${o.item}</b>
-                                <small>${o.asal} • 🕒 ${o.waktu || 'Langsung'}</small>
+                                <small>${o.asal} • 🕒 ${o.waktu || 'Langsung'}</small><br>
+                                ${o.asal === 'Ojol' ? '<span class="tag-ojol">PRIORITAS OJOL</span>' : ''}
+                                ${callText}
                             </div>
                             <div class="btn-group">
                                 <button onclick='callCustomer(${JSON.stringify(o)})' class="btn btn-call">📢</button>
                                 <button onclick="markDone('${o.id}')" class="btn btn-done">SELESAI</button>
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
                 }
 
-                // Render Daftar Selesai (SIAP AMBIL)
                 const doneList = document.getElementById('done-list');
                 if (!data.selesai || data.selesai.length === 0) {
                     doneList.innerHTML = '<div class="empty-state">Tidak ada pesanan yang siap diambil.</div>';
@@ -126,7 +153,7 @@
                             <div class="q-badge" style="background: #999;">${String(o.id).slice(-3)}</div>
                             <div class="info">
                                 <b>${o.item}</b>
-                                <small style="color: var(--success); font-weight:bold;">Pelanggan melihat status "SIAP"</small>
+                                <small style="color: var(--success); font-weight:bold;">Status: SIAP DIAMBIL</small>
                             </div>
                             <button onclick="deletePermanent('${o.id}')" class="btn btn-del">HAPUS</button>
                         </div>
@@ -136,12 +163,29 @@
         }
 
         async function callCustomer(order) {
+            
+            if (!callCounts[order.id]) {
+                callCounts[order.id] = 1;
+            } else {
+                callCounts[order.id] += 1;
+            }
+
             await fetch('/panggil', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ id: order.id })
             });
-            Swal.fire({ title: 'Memanggil...', timer: 800, showConfirmButton: false, toast: true, position: 'top-end', icon: 'success' });
+            
+            Swal.fire({ 
+                title: `Panggilan ke-${callCounts[order.id]}`, 
+                timer: 800, 
+                showConfirmButton: false, 
+                toast: true, 
+                position: 'top-end', 
+                icon: 'success' 
+            });
+            
+            refresh(); 
         }
 
         async function markDone(id) {
@@ -150,13 +194,14 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({id: parseInt(id)})
             });
+            
+            delete callCounts[id];
             refresh();
         }
 
         async function deletePermanent(id) {
             const result = await Swal.fire({
                 title: 'Hapus Pesanan?',
-                text: "Data akan hilang dari sistem dan HP pelanggan.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#e74c3c',
