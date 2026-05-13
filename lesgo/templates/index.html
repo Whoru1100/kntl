@@ -139,15 +139,15 @@
                 <h3>🛒 Pilihan Menu</h3>
                 <div class="menu-grid">
                     <div class="menu-card" onclick="add('Kopi Aren', 15000)">
-                        <img src="/static/img/kopi_aren.jpg" onerror="this.src='https://via.placeholder.com/150?text=Kopi+Aren'">
+                        <img src="/static/img/kopi_aren.jpg">
                         <div class="menu-info"><b>Kopi Aren</b><span>15rb</span></div>
                     </div>
                     <div class="menu-card" onclick="add('Kopi Susu', 12000)">
-                        <img src="/static/img/kopi_susu.jpg" onerror="this.src='https://via.placeholder.com/150?text=Kopi+Susu'">
+                        <img src="/static/img/kopi_susu.jpg">
                         <div class="menu-info"><b>Kopi Susu</b><span>12rb</span></div>
                     </div>
                     <div class="menu-card" onclick="add('Blue Lagoon', 20000)">
-                        <img src="/static/img/blue_lagon.jpg" onerror="this.src='https://via.placeholder.com/150?text=Kopi+Susu'">
+                        <img src="/static/img/blue_lagon.jpg">
                         <div class="menu-info"><b>Blue Lagoon</b><span>20rb</span></div>
                     </div>
                 </div>
@@ -254,8 +254,10 @@
         }
 
         async function pay() {
-            const asal = document.getElementById('asal').value;
+            const asalSelect = document.getElementById('asal');
+            const asal = asalSelect.value;
             let waktuInfo = "Langsung";
+            
             if(asal === 'Jadwal') {
                 const time = document.getElementById('sched-time').value;
                 const date = document.getElementById('sched-date').value;
@@ -276,15 +278,25 @@
                     body: JSON.stringify(payload) 
                 });
                 const result = await res.json();
+                
                 myOrderIds.push(String(result.id));
                 localStorage.setItem('my_orders', JSON.stringify(myOrderIds));
+                
                 Swal.fire({
                     title: 'Pesanan Disimpan!',
                     text: 'Nomor Antrean: ' + String(result.id).slice(-3),
                     icon: 'success',
                     confirmButtonColor: '#6F4E37'
                 });
-                cart = []; render();
+
+               
+                cart = []; 
+                asalSelect.value = ""; 
+                document.getElementById('sched-box').style.display = 'none';
+                document.getElementById('sched-time').value = "";
+                document.getElementById('sched-date').value = "";
+                
+                render(); 
                 updateStatusPesanan();
             } catch(e) {
                 Swal.fire('Error', 'Gagal mengirim pesanan', 'error');
@@ -310,16 +322,30 @@
                     const orderSelesai = data.selesai.find(o => String(o.id) === myId);
 
                     if (orderAktif) {
-                        // LOGIKA BARU: Jika sedang dipanggil, ganti label jadi Hijau
+                        let statusLabel = "DIPROSES";
+                        let bgColor = "#fff3e0";
+                        let textColor = "#e67e22";
+
                         if (String(dataPanggil.panggil_id) === myId) {
-                            listTampil.push({ data: orderAktif, label: "DIPANGGIL", bg: "#e8f5e9", warna: "#27ae60" });
-                        } else {
-                            listTampil.push({ data: orderAktif, label: "DIPROSES", bg: "#fff3e0", warna: "#e67e22" });
+                            statusLabel = "DIPANGGIL";
+                            bgColor = "#e8f5e9";
+                            textColor = "#27ae60";
                         }
+
+                        listTampil.push({ 
+                            data: orderAktif, label: statusLabel, bg: bgColor, warna: textColor,
+                            priority: orderAktif.asal === 'Ojol' ? 1 : 2 
+                        });
                     } else if (orderSelesai) {
-                        listTampil.push({ data: orderSelesai, label: "SIAP DIAMBIL", bg: "#e8f5e9", warna: "#27ae60" });
+                        listTampil.push({ 
+                            data: orderSelesai, label: "SIAP DIAMBIL", bg: "#e8f5e9", warna: "#27ae60",
+                            priority: orderSelesai.asal === 'Ojol' ? 1 : 2 
+                        });
                     }
                 });
+
+                // PRIORITAS OJOL PALING ATAS
+                listTampil.sort((a, b) => a.priority - b.priority);
 
                 if (listTampil.length > 0) {
                     listTampil.forEach(item => {
@@ -351,7 +377,6 @@
                 const data = await res.json();
                 
                 if (data.panggil_id && Number(data.updated_at) > lastCallTimestamp) {
-                    
                     lastCallTimestamp = Number(data.updated_at); 
                     localStorage.setItem('last_call_time', lastCallTimestamp);
 
