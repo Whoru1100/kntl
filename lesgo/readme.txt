@@ -16,4 +16,4 @@ NOTE :
 ==========
 2. Gua tambahin admin.html, buat panggil pelanggan (http://(ipv4)/admin)
 ==========
-3. Di app.py baris akhir yang "app.run(debug=True, host='1xx.xxx.xxx.xxx', port=5000)" ganti sama ipv4 cmd
+3. Saran biar g ada bug atau semacamnya, di app.py baris akhir yang "app.run(debug=True, host='1xx.xxx.xxx.xxx', port=5000)" ganti sama ipv4 cmd
