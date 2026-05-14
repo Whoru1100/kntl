@@ -1,7 +1,8 @@
 Install librarynya dulu : 
+- pip install flask flask-cors gtts pygame
 - pip install pyttsx3
 - git checkout -b fitur-compliment
-- pip install flask flask-cors gtts pygame | (Opsional)
+
 
 ==========
 
