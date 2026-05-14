@@ -65,9 +65,21 @@
         
         .empty-state { text-align: center; padding: 30px; color: #aaa; font-style: italic; font-size: 0.9rem; }
 
+        .btn-clear-all {
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-clear-all:hover { opacity: 0.9; transform: scale(1.05); }
+
         @media (max-width: 600px) {
             .q-item { flex-wrap: wrap; position: relative; padding-top: 30px; }
-            
             .list-number-wrapper { 
                 position: absolute; top: -10px; left: 15px; 
                 background: var(--accent); color: white;
@@ -77,7 +89,6 @@
             }
             .list-number-label { color: white; font-size: 0.7rem; }
             .list-number-value { color: white; font-size: 0.9rem; margin-top: 0; }
-            
             .info { min-width: 100%; margin: 5px 0; }
             .btn-group { width: 100%; margin-top: 10px; }
             .btn-done, .btn-del { flex: 2; height: 48px; }
@@ -112,7 +123,10 @@
         </div>
 
         <div class="admin-card" style="border-top: 4px solid var(--success);">
-            <h3>✅ Siap Diambil</h3>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3>✅ Siap Diambil</h3>
+                <button onclick="clearAllDone()" class="btn-clear-all">🗑️ CLEAR ALL</button>
+            </div>
             <div id="done-list"></div>
         </div>
     </div>
@@ -220,6 +234,33 @@
                     body: JSON.stringify({id: parseInt(id)})
                 });
                 refresh();
+            }
+        }
+
+        async function clearAllDone() {
+            const result = await Swal.fire({
+                title: 'Bersihkan Semua?',
+                text: "Semua daftar pesanan yang sudah selesai akan dihapus permanen.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                cancelButtonText: 'Batal',
+                confirmButtonText: 'Ya, Hapus Semua!'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch('/clear_all_done', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+                    if (res.ok) {
+                        Swal.fire({ title: 'Dibersihkan!', icon: 'success', timer: 1000, showConfirmButton: false });
+                        refresh();
+                    }
+                } catch (e) {
+                    console.error("Gagal menghapus semua:", e);
+                }
             }
         }
 
