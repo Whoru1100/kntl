@@ -137,14 +137,14 @@
                 const res = await fetch('/monitor?t=' + Date.now());
                 const data = await res.json();
                 
-                document.getElementById('count-active').innerText = data.antrean.length;
+                document.getElementById('count-active').innerText = data.antrian.length;
                 document.getElementById('count-done').innerText = data.selesai.length;
                 
                 const list = document.getElementById('admin-list');
-                if (!data.antrean || data.antrean.length === 0) {
+                if (!data.antrian || data.antrian.length === 0) {
                     list.innerHTML = '<div class="empty-state">Belum ada pesanan masuk.</div>';
                 } else {
-                    list.innerHTML = data.antrean.map((o, idx) => `
+                    list.innerHTML = data.antrian.map((o, idx) => `
                         <div class="q-item">
                             <div class="list-number-wrapper">
                                 <div class="list-number-label">Antrian Ke</div>
