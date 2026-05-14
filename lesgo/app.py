@@ -7,46 +7,57 @@ from io import BytesIO
 app = Flask(__name__)
 CORS(app)
 
-data_antrian = []
-data_selesai = []
-nomor_urut_global = 1
-suara_sedang_jalan = False
-last_notify_time = 0
+# --- State Management ---
+# Menggunakan struktur data yang konsisten
+state = {
+    "antrian": [],
+    "selesai": [],
+    "nomor_urut_global": 1,
+    "suara_sedang_jalan": False,
+    "last_notify_time": 0,
+    "data_panggilan": {"panggil_id": None, "panggil_item": "", "updated_at": 0}
+}
 
-# Penyimpanan status panggilan terakhir
-data_panggilan = {"panggil_id": None, "panggil_item": "", "updated_at": 0} 
-
-pygame.mixer.pre_init(44100, -16, 2, 512)
-pygame.mixer.init()
+# --- Audio Initialization ---
+try:
+    pygame.mixer.pre_init(44100, -16, 2, 512)
+    pygame.mixer.init()
+except Exception as e:
+    print(f"Peringatan Audio: Mixer tidak bisa inisialisasi ({e})")
 
 def notify(text):
-    global suara_sedang_jalan, last_notify_time
+    """Mengaktifkan notifikasi suara via gTTS tanpa memblokir thread utama."""
     current_time = time.time()
-    if suara_sedang_jalan or (current_time - last_notify_time < 2): 
+    
+    # Pencegahan spam suara dalam rentang 2 detik
+    if state["suara_sedang_jalan"] or (current_time - state["last_notify_time"] < 2): 
         return False
     
     def speak():
-        global suara_sedang_jalan, last_notify_time
+        state["suara_sedang_jalan"] = True
+        state["last_notify_time"] = time.time()
+        # Gunakan ID unik untuk nama file agar tidak bentrok (race condition)
+        fname = f"notif_{int(time.time() * 1000)}.mp3"
         try:
-            suara_sedang_jalan = True
-            last_notify_time = time.time()
             tts = gTTS(text=text, lang='id')
-            fname = f"v_{int(time.time())}.mp3"
             tts.save(fname)
             pygame.mixer.music.load(fname)
             pygame.mixer.music.play()
             while pygame.mixer.music.get_busy(): 
                 time.sleep(0.1)
             pygame.mixer.music.unload()
-            if os.path.exists(fname): 
-                os.remove(fname)
         except Exception as e:
             print(f"Error Audio: {e}")
         finally:
-            suara_sedang_jalan = False
+            if os.path.exists(fname):
+                try: os.remove(fname)
+                except: pass
+            state["suara_sedang_jalan"] = False
             
     threading.Thread(target=speak, daemon=True).start()
     return True
+
+# --- Routes ---
 
 @app.route('/')
 def index(): 
@@ -57,97 +68,103 @@ def admin_page():
     return render_template('admin.html')
 
 @app.route('/monitor')
-def monitor(): 
+def monitor():
     return jsonify({
-        "antrian": data_antrian,
-        "selesai": data_selesai
+        "antrian": state["antrian"], 
+        "selesai": state["selesai"]
     })
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
-    global data_antrian, nomor_urut_global
-    d = request.json
+    data = request.json
+    if not data or 'item' not in data:
+        return jsonify({"status": "error", "message": "Item wajib diisi"}), 400
+
     new_id = int(time.time() * 1000) 
+    asal_pesanan = data.get('asal', 'Pelanggan') 
     
-    asal_pesanan = d.get('asal', 'Pelanggan') 
-    
-    p = {
+    pesanan = {
         "id": new_id, 
-        "no_urut": nomor_urut_global,
-        "item": d['item'], 
+        "no_urut": state["nomor_urut_global"],
+        "item": data['item'], 
         "asal": asal_pesanan, 
-        "waktu": d.get('waktu', '-'),
+        "waktu": data.get('waktu', datetime.datetime.now().strftime("%H:%M")),
+        "estimasi_kustom": None,
         "created_at": datetime.datetime.now().isoformat() 
     }
-    data_antrian.append(p)
-    nomor_urut_global += 1
     
-    teks_notif = f"Pesanan baru masuk dari {asal_pesanan}"
-    notify(teks_notif)
+    state["antrian"].append(pesanan)
+    state["nomor_urut_global"] += 1
     
+    notify(f"Pesanan baru: {pesanan['item']} dari {asal_pesanan}")
     return jsonify({"status": "success", "id": new_id})
 
-@app.route('/cek_panggilan')
-def cek_panggilan():
-    global data_panggilan
-    return jsonify({
-        "panggil_id": data_panggilan["panggil_id"],
-        "panggil_item": data_panggilan["panggil_item"],
-        "updated_at": data_panggilan["updated_at"]
-    })
-
-@app.route('/get_audio/<text>')
-def get_audio(text):
-    tts = gTTS(text=text, lang='id')
-    fp = BytesIO()
-    tts.write_to_fp(fp)
-    fp.seek(0)
-    return send_file(fp, mimetype='audio/mpeg')
+@app.route('/selesai', methods=['POST'])
+def selesai():
+    """Memproses pesanan (Input Estimasi atau Tandai Selesai)"""
+    data = request.json
+    tid = int(data.get('id'))
+    
+    # Kasus 1: Update Estimasi (Status tetap di Antrian)
+    if 'estimasi_kustom' in data:
+        for p in state["antrian"]:
+            if p['id'] == tid:
+                p['estimasi_kustom'] = data['estimasi_kustom']
+                return jsonify({"status": "updated"})
+                
+    # Kasus 2: Final Selesai (Pindah dari Antrian ke Selesai)
+    pesanan = next((p for p in state["antrian"] if p['id'] == tid), None)
+    if pesanan:
+        state["selesai"].append(pesanan)
+        state["antrian"] = [p for p in state["antrian"] if p['id'] != tid]
+        return jsonify({"status": "done"})
+    
+    return jsonify({"status": "error", "message": "ID tidak ditemukan"}), 404
 
 @app.route('/panggil', methods=['POST'])
 def panggil():
-    global data_panggilan
-    d = request.json
-    id_panggil = str(d.get('id', ''))
+    data = request.json
+    id_panggil = str(data.get('id', ''))
     
-    pesanan = next((p for p in data_antrian if str(p['id']) == id_panggil), None)
+    # Cari di kedua list (antrian & selesai)
+    semua_data = state["antrian"] + state["selesai"]
+    pesanan = next((p for p in semua_data if str(p['id']) == id_panggil), None)
     item_nama = pesanan['item'] if pesanan else "pesanan Anda"
 
-    data_panggilan = {
+    state["data_panggilan"] = {
         "panggil_id": id_panggil,
         "panggil_item": item_nama,
         "updated_at": time.time() * 1000
     }
-    
     return jsonify({"status": "calling"})
 
-@app.route('/selesai', methods=['POST'])
-def selesai():
-    global data_antrian, data_selesai
-    tid = int(request.json['id'])
-    pesanan = next((p for p in data_antrian if int(p['id']) == tid), None)
-    if pesanan:
-        data_selesai.append(pesanan)
-        data_antrian = [p for p in data_antrian if int(p['id']) != tid]
-    return jsonify({"status": "done"})
+@app.route('/cek_panggilan')
+def cek_panggilan():
+    return jsonify(state["data_panggilan"])
 
 @app.route('/delete_permanent', methods=['POST'])
 def delete_permanent():
-    global data_selesai
-    tid = int(request.json['id'])
-    data_selesai = [p for p in data_selesai if int(p['id']) != tid]
+    tid = int(request.json.get('id'))
+    state["selesai"] = [p for p in state["selesai"] if p['id'] != tid]
     return jsonify({"status": "deleted"})
 
 @app.route('/clear_all_done', methods=['POST'])
 def clear_all_done():
-    global data_selesai
+    state["selesai"].clear()
+    return jsonify({"status": "success"})
+
+# --- Helper Audio Route ---
+@app.route('/get_audio/<text>')
+def get_audio(text):
     try:
-        data_selesai.clear() 
-        return jsonify({"status": "success", "message": "Semua antrian selesai dihapus"}), 200
+        tts = gTTS(text=text, lang='id')
+        fp = BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        return send_file(fp, mimetype='audio/mpeg')
     except Exception as e:
-        print(f"Error clear_all: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    # Ganti host dengan IP Laptop (IPv4 dari ipconfig) kalau mau pake 2 device.
+    # Penting: host 0.0.0.0 agar bisa diakses dari perangkat lain dalam satu WiFi
     app.run(debug=True, host='0.0.0.0', port=5000)
