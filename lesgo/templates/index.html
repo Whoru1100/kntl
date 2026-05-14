@@ -26,7 +26,25 @@
             border-radius: 0 0 50% 50% / 0 0 20px 20px;
             position: relative; z-index: 1;
         }
-        .navbar h1 { margin: 0; font-size: 1.5rem; letter-spacing: 1px; }
+
+        .navbar h1 { 
+            margin: 0; 
+            font-size: 1.5rem; 
+            letter-spacing: 1px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 15px; 
+        }
+
+        .navbar-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.4);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
 
         #main-app { 
             padding: 0 15px 120px; margin-top: -30px; 
@@ -130,7 +148,10 @@
     </div>
 
     <nav class="navbar">
-        <h1>Cafe Fairuz</h1>
+        <h1>
+            <img src="/static/img/avatarlogo.png" alt="Logo" class="navbar-logo">
+            Cafe Fairuz
+        </h1>
     </nav>
 
     <div id="main-app">
@@ -206,7 +227,6 @@
         function start() {
             audioPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
             audioPlayer.play().catch(e => {});
-
             document.getElementById('login-screen').style.display = 'none';
             updateStatusPesanan();
         }
@@ -327,11 +347,9 @@
 
                     if (orderAktif) {
                         let statusLabel = "DIPROSES", bgColor = "#fff3e0", textColor = "#e67e22";
-
                         if (String(dataPanggil.panggil_id) === myId) {
                             statusLabel = "DIPANGGIL"; bgColor = "#e8f5e9"; textColor = "#27ae60";
                         }
-
                         listTampil.push({ 
                             data: orderAktif, label: statusLabel, bg: bgColor, warna: textColor,
                             priority: orderAktif.asal === 'Ojol' ? 1 : 2,
@@ -360,7 +378,6 @@
 
         function renderStatusItem(o, teks, bg, warna, urutan) {
             const priorityLabel = (o.asal === 'Ojol') ? '<div class="tag-ojol">Prioritas Driver Ojek Online</div>' : '';
-            
             let estimasiTxt = "";
             if (teks === "DIPROSES" && urutan > 0) {
                 const menit = (urutan * 3) + 5;
@@ -381,7 +398,6 @@
 
         async function pantauPanggilan() {
             if (isCalling) return; 
-
             try {
                 const res = await fetch('/cek_panggilan?t=' + Date.now());
                 const data = await res.json();
@@ -392,17 +408,16 @@
                     localStorage.setItem('last_call_time', lastCallTimestamp);
 
                     const menuDipilih = data.panggil_item || "pesanan Anda"; 
-                    const teksPanggilan = `Nomor antrean ${String(data.panggil_id).slice(-3)}, silakan ambil ${menuDipilih}`;
+                    const teksPanggilan = `Nomor antrean ${String(data.panggil_id).slice(-3)}, silahkan ambil ${menuDipilih}`;
                     
                     audioPlayer.src = `/get_audio/${encodeURIComponent(teksPanggilan)}`;
                     audioPlayer.play().catch(e => { isCalling = false; });
-
                     audioPlayer.onended = () => { isCalling = false; };
 
                     if (myOrderIds.includes(String(data.panggil_id))) {
                         Swal.fire({
                             title: "PESANAN SIAP!",
-                            text: `Nomor Antrean #${String(data.panggil_id).slice(-3)} silakan ambil ${menuDipilih}`,
+                            text: `Nomor Antrean #${String(data.panggil_id).slice(-3)} silahkan ambil ${menuDipilih}`,
                             icon: "info",
                             confirmButtonColor: '#6F4E37'
                         });
