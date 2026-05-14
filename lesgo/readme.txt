@@ -1,6 +1,5 @@
 Install librarynya dulu : 
-- python -m pip install flask flask-cors gtts pygame | (buat suara AI nya)
-- pip install pyttsx3
+- - pip install pyttsx3
 - git checkout -b fitur-compliment
 
 ==========
