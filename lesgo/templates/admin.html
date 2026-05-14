@@ -75,6 +75,8 @@
         .btn-call { background: var(--accent); color: white; font-size: 1.4rem; width: 50px; }
         .btn-done { background: var(--success); color: white; padding: 0 20px; }
         .btn-del { background: var(--error); color: white; padding: 0 20px; }
+        
+        .empty-state { text-align: center; padding: 20px; color: #aaa; font-style: italic; }
     </style>
 </head>
 <body>
@@ -137,7 +139,7 @@
                                 <small>📍 ${o.asal} • 🕒 ${o.waktu || 'Langsung'}</small>
                             </div>
                             <div class="btn-group">
-                                <button onclick='callCustomer(${JSON.stringify(o)})' class="btn btn-call">📢</button>
+                                <button onclick='callCustomer(${JSON.stringify(o)})' class="btn btn-call" title="Panggil Suara">📢</button>
                                 <button onclick="markDone('${o.id}')" class="btn btn-done">SELESAI</button>
                             </div>
                         </div>
@@ -170,12 +172,24 @@
         }
 
         async function callCustomer(order) {
-            await fetch('/panggil', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ id: order.id })
-            });
-            Swal.fire({ title: 'Memanggil #' + String(order.id).slice(-3), timer: 800, showConfirmButton: false, toast: true, position: 'top-end', icon: 'success' });
+            try {
+                await fetch('/panggil', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: order.id })
+                });
+                
+                Swal.fire({ 
+                    title: 'Memanggil #' + String(order.id).slice(-3), 
+                    timer: 1000, 
+                    showConfirmButton: false, 
+                    toast: true, 
+                    position: 'top-end', 
+                    icon: 'success' 
+                });
+            } catch (e) {
+                console.error("Gagal memanggil:", e);
+            }
         }
 
         async function markDone(id) {
