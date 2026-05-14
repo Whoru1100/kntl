@@ -7,7 +7,7 @@ from io import BytesIO
 app = Flask(__name__)
 CORS(app)
 
-data_antrean = []
+data_antrian = []
 data_selesai = []
 nomor_urut_global = 1
 suara_sedang_jalan = False
@@ -59,13 +59,13 @@ def admin_page():
 @app.route('/monitor')
 def monitor(): 
     return jsonify({
-        "antrean": data_antrean,
+        "antrian": data_antrian,
         "selesai": data_selesai
     })
 
 @app.route('/checkout', methods=['POST'])
 def checkout():
-    global data_antrean, nomor_urut_global
+    global data_antrian, nomor_urut_global
     d = request.json
     new_id = int(time.time() * 1000) 
     
@@ -79,7 +79,7 @@ def checkout():
         "waktu": d.get('waktu', '-'),
         "created_at": datetime.datetime.now().isoformat() 
     }
-    data_antrean.append(p)
+    data_antrian.append(p)
     nomor_urut_global += 1
     
     teks_notif = f"Pesanan baru masuk dari {asal_pesanan}"
@@ -110,7 +110,7 @@ def panggil():
     d = request.json
     id_panggil = str(d.get('id', ''))
     
-    pesanan = next((p for p in data_antrean if str(p['id']) == id_panggil), None)
+    pesanan = next((p for p in data_antrian if str(p['id']) == id_panggil), None)
     item_nama = pesanan['item'] if pesanan else "pesanan Anda"
 
     data_panggilan = {
@@ -123,12 +123,12 @@ def panggil():
 
 @app.route('/selesai', methods=['POST'])
 def selesai():
-    global data_antrean, data_selesai
+    global data_antrian, data_selesai
     tid = int(request.json['id'])
-    pesanan = next((p for p in data_antrean if int(p['id']) == tid), None)
+    pesanan = next((p for p in data_antrian if int(p['id']) == tid), None)
     if pesanan:
         data_selesai.append(pesanan)
-        data_antrean = [p for p in data_antrean if int(p['id']) != tid]
+        data_antrian = [p for p in data_antrian if int(p['id']) != tid]
     return jsonify({"status": "done"})
 
 @app.route('/delete_permanent', methods=['POST'])
@@ -143,7 +143,7 @@ def clear_all_done():
     global data_selesai
     try:
         data_selesai.clear() 
-        return jsonify({"status": "success", "message": "Semua antrean selesai dihapus"}), 200
+        return jsonify({"status": "success", "message": "Semua antrian selesai dihapus"}), 200
     except Exception as e:
         print(f"Error clear_all: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
