@@ -405,8 +405,8 @@
                 let htmlContent = ""; let listTampil = [];
 
                 myOrderIds.forEach(myId => {
-                    const idxAktif = data.antrean.findIndex(o => String(o.id) === myId);
-                    const orderAktif = data.antrean[idxAktif];
+                    const idxAktif = data.antrian.findIndex(o => String(o.id) === myId);
+                    const orderAktif = data.antrian[idxAktif];
                     const orderSelesai = data.selesai.find(o => String(o.id) === myId);
 
                     if (orderAktif) {
@@ -447,7 +447,7 @@
                     audioPlayer.play().catch(e => { isCalling = false; });
                     audioPlayer.onended = () => { isCalling = false; };
                     if (myOrderIds.includes(String(data.panggil_id))) {
-                        Swal.fire({ title: "PESANAN SIAP!", text: `Nomor Antrean #${String(data.panggil_id).slice(-3)} silahkan ambil ${menuDipilih}`, icon: "info", confirmButtonColor: '#6F4E37' });
+                        Swal.fire({ title: "PESANAN SIAP!", text: `Nomor Antrian #${String(data.panggil_id).slice(-3)} silahkan ambil ${menuDipilih}`, icon: "info", confirmButtonColor: '#6F4E37' });
                     }
                 }
                 updateStatusPesanan();
