@@ -10,79 +10,85 @@
         :root { 
             --primary: #6F4E37; --accent: #f39c12; --bg: #fdfaf7; 
             --white: #ffffff; --success: #27ae60; --error: #e74c3c;
-            --dark-id: #6F4E37;
+            --dark-id: #4e3626;
         }
         
         body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: #333; }
 
         .navbar { 
-            background: var(--primary); color: var(--white); padding: 20px; 
+            background: var(--primary); color: var(--white); padding: 15px; 
             text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: sticky; top: 0; z-index: 1000;
         }
+        .navbar h1 { font-size: clamp(1.1rem, 4vw, 1.5rem); margin: 0; }
 
-        .container { max-width: 900px; margin: 30px auto; padding: 0 15px; }
+        .container { max-width: 900px; margin: 20px auto; padding: 0 15px; }
 
-        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .stat-card { background: var(--white); padding: 20px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .stat-card h2 { margin: 5px 0; color: var(--primary); }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: var(--white); padding: 15px; border-radius: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .stat-card h2 { margin: 5px 0; color: var(--primary); font-size: 1.8rem; }
+        .stat-card small { font-weight: 600; color: #888; text-transform: uppercase; font-size: 0.7rem; }
 
-        .admin-card { background: var(--white); padding: 25px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        .admin-card { background: var(--white); padding: 20px; border-radius: 28px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        .admin-card h3 { margin-top: 0; font-size: 1.1rem; }
         
         .q-item { 
-            padding: 15px; background: #fff; border-radius: 20px; margin-bottom: 12px; 
-            border: 1.5px solid #f0f0f0; display: flex; align-items: center; gap: 20px;
+            padding: 15px; background: #fff; border-radius: 20px; margin-bottom: 15px; 
+            border: 1.5px solid #f0f0f0; display: flex; align-items: center; gap: 15px;
+            transition: 0.3s;
         }
 
         .list-number-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 70px;
-            text-align: center;
-            border-right: 2px solid #eee;
-            padding-right: 15px;
+            display: flex; flex-direction: column; align-items: center;
+            min-width: 85px; text-align: center; border-right: 2px solid #eee; padding-right: 12px;
         }
-        .list-number-label {
-            font-size: 0.65rem;
-            color: #888;
-            font-weight: 600;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
-        .list-number-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-            line-height: 1;
-            margin-top: 2px;
-        }
+        .list-number-label { font-size: 0.65rem; color: #888; font-weight: 600; text-transform: uppercase; line-height: 1.2; }
+        .list-number-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); line-height: 1; margin-top: 2px; }
 
         .q-id-box { 
             background: var(--dark-id); color: #fff; 
-            min-width: 75px; height: 65px; border-radius: 15px; 
+            min-width: 65px; height: 60px; border-radius: 12px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
-        .q-id-box small { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; opacity: 0.9; }
-        .q-id-box span { font-size: 1.4rem; font-weight: 700; }
+        .q-id-box small { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
+        .q-id-box span { font-size: 1.2rem; font-weight: 700; }
 
-        .info { flex: 1; }
-        .info b { display: block; font-size: 1.05rem; color: #222; }
-        .info small { color: #777; font-size: 0.85rem; display: block; margin-top: 4px; }
+        .info { flex: 1; min-width: 0; }
+        .info b { display: block; font-size: 1rem; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info small { color: #777; font-size: 0.8rem; display: block; margin-top: 2px; }
 
-        .btn-group { display: flex; gap: 10px; }
-        .btn { border: none; border-radius: 12px; cursor: pointer; padding: 12px; font-weight: bold; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-        .btn-call { background: var(--accent); color: white; font-size: 1.4rem; width: 50px; }
-        .btn-done { background: var(--success); color: white; padding: 0 20px; }
-        .btn-del { background: var(--error); color: white; padding: 0 20px; }
+        .btn-group { display: flex; gap: 8px; }
+        .btn { border: none; border-radius: 12px; cursor: pointer; padding: 10px; font-weight: bold; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .btn-call { background: var(--accent); color: white; width: 45px; height: 45px; font-size: 1.2rem; }
+        .btn-done { background: var(--success); color: white; padding: 0 15px; font-size: 0.85rem; }
+        .btn-del { background: var(--error); color: white; padding: 0 15px; font-size: 0.85rem; }
         
-        .empty-state { text-align: center; padding: 20px; color: #aaa; font-style: italic; }
+        .empty-state { text-align: center; padding: 30px; color: #aaa; font-style: italic; font-size: 0.9rem; }
+
+        @media (max-width: 600px) {
+            .q-item { flex-wrap: wrap; position: relative; padding-top: 30px; }
+            
+            .list-number-wrapper { 
+                position: absolute; top: -10px; left: 15px; 
+                background: var(--accent); color: white;
+                border-radius: 8px; padding: 4px 12px; 
+                min-width: auto; flex-direction: row; gap: 6px; border-right: none;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            .list-number-label { color: white; font-size: 0.7rem; }
+            .list-number-value { color: white; font-size: 0.9rem; margin-top: 0; }
+            
+            .info { min-width: 100%; margin: 5px 0; }
+            .btn-group { width: 100%; margin-top: 10px; }
+            .btn-done, .btn-del { flex: 2; height: 48px; }
+            .btn-call { flex: 1; height: 48px; }
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <h1>🛠️ Dashboard Admin - Cafe Fairuz</h1>
+        <h1>🛠️ Admin - Cafe Fairuz</h1>
     </nav>
 
     <div class="container">
@@ -92,21 +98,21 @@
                 <h2 id="count-active">0</h2>
             </div>
             <div class="stat-card">
-                <small>Siap Diambil</small>
+                <small>Siap Ambil</small>
                 <h2 id="count-done" style="color: var(--success);">0</h2>
             </div>
         </div>
 
         <div class="admin-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h3>⏳ Dashboard Antrian</h3>
-                <button onclick="refresh()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:bold;">🔄 REFRESH</button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3>⏳ Sedang Diproses</h3>
+                <button onclick="refresh()" style="background:none; border:none; color:var(--primary); cursor:pointer; font-weight:600; font-size:0.8rem;">🔄 REFRESH</button>
             </div>
             <div id="admin-list"></div>
         </div>
 
-        <div class="admin-card" style="border: 2px solid #e8f5e9;">
-            <h3>✅ Siap Diambil / Selesai</h3>
+        <div class="admin-card" style="border-top: 4px solid var(--success);">
+            <h3>✅ Siap Diambil</h3>
             <div id="done-list"></div>
         </div>
     </div>
@@ -136,10 +142,10 @@
                             </div>
                             <div class="info">
                                 <b>${o.item}</b>
-                                <small>📍 ${o.asal} • 🕒 ${o.waktu || 'Langsung'}</small>
+                                <small>📍 ${o.asal} • 🕒 ${o.waktu || 'Baru'}</small>
                             </div>
                             <div class="btn-group">
-                                <button onclick='callCustomer(${JSON.stringify(o)})' class="btn btn-call" title="Panggil Suara">📢</button>
+                                <button onclick='callCustomer(${JSON.stringify(o)})' class="btn btn-call">📢</button>
                                 <button onclick="markDone('${o.id}')" class="btn btn-done">SELESAI</button>
                             </div>
                         </div>
@@ -148,23 +154,21 @@
 
                 const doneList = document.getElementById('done-list');
                 if (!data.selesai || data.selesai.length === 0) {
-                    doneList.innerHTML = '<div class="empty-state">Tidak ada pesanan yang siap.</div>';
+                    doneList.innerHTML = '<div class="empty-state">Belum ada yang selesai.</div>';
                 } else {
-                    doneList.innerHTML = data.selesai.map((o, idx) => `
-                        <div class="q-item" style="opacity: 0.85; border-left: 5px solid var(--success);">
-                            <div class="list-number-wrapper" style="border-right: 2px solid #e8f5e9;">
-                                <div class="list-number-label">Urutan</div>
-                                <div class="list-number-value" style="color:#999;">${idx + 1}</div>
-                            </div>
-                            <div class="q-id-box" style="background:#555;">
+                    doneList.innerHTML = data.selesai.map((o) => `
+                        <div class="q-item" style="border-left: 5px solid var(--success); background: #f9fff9;">
+                            <div class="q-id-box" style="background:#555; min-width:55px; height:50px;">
                                 <small>ID</small>
-                                <span>${String(o.id).slice(-3)}</span>
+                                <span style="font-size:1rem;">${String(o.id).slice(-3)}</span>
                             </div>
                             <div class="info">
                                 <b>${o.item}</b>
-                                <small style="color: var(--success); font-weight:bold;">Status: SIAP DIKASIR</small>
+                                <small style="color: var(--success); font-weight:bold;">SIAP DIKASIR</small>
                             </div>
-                            <button onclick="deletePermanent('${o.id}')" class="btn btn-del">HAPUS</button>
+                            <div class="btn-group">
+                                <button onclick="deletePermanent('${o.id}')" class="btn btn-del">HAPUS</button>
+                            </div>
                         </div>
                     `).join('');
                 }
@@ -181,15 +185,13 @@
                 
                 Swal.fire({ 
                     title: 'Memanggil #' + String(order.id).slice(-3), 
-                    timer: 1000, 
+                    timer: 1500, 
                     showConfirmButton: false, 
                     toast: true, 
                     position: 'top-end', 
                     icon: 'success' 
                 });
-            } catch (e) {
-                console.error("Gagal memanggil:", e);
-            }
+            } catch (e) { console.error("Gagal memanggil:", e); }
         }
 
         async function markDone(id) {
@@ -208,6 +210,7 @@
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#e74c3c',
+                cancelButtonText: 'Batal',
                 confirmButtonText: 'Ya, Hapus!'
             });
             if (result.isConfirmed) {
