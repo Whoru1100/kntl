@@ -12,12 +12,14 @@
             --bg: #fdfaf7; --white: #ffffff; --text: #333;
             --success: #27ae60;
             --ojol-color: #00AA13;
+            --danger: #e74c3c;
         }
         
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
             font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: var(--text); 
             min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;
+            scroll-behavior: smooth;
         }
 
         .navbar { 
@@ -28,21 +30,13 @@
         }
 
         .navbar h1 { 
-            margin: 0; 
-            font-size: 1.5rem; 
-            letter-spacing: 1px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            gap: 15px; 
+            margin: 0; font-size: 1.5rem; letter-spacing: 1px; 
+            display: flex; align-items: center; justify-content: center; gap: 15px; 
         }
 
         .navbar-logo {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(255,255,255,0.4);
+            width: 80px; height: 80px; border-radius: 50%;
+            object-fit: cover; border: 2px solid rgba(255,255,255,0.4);
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
@@ -66,10 +60,13 @@
         }
 
         .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        
         .menu-card { 
-            background: var(--white); border: 1px solid var(--border); 
+            display: none; background: var(--white); border: 1px solid var(--border); 
             border-radius: 18px; overflow: hidden; cursor: pointer; transition: 0.2s;
+            position: relative;
         }
+
         .menu-card:active { transform: scale(0.96); }
         .menu-card img { width: 100%; height: 110px; object-fit: cover; }
         .menu-info { padding: 10px; text-align: center; }
@@ -90,8 +87,21 @@
 
         select, input { 
             width: 100%; padding: 12px 15px; border-radius: 12px; 
-            border: 1px solid var(--border); font-family: inherit; font-size: 0.9rem;
+            border: 1px solid var(--border); font-family: 'Poppins', sans-serif; font-size: 0.9rem;
             background: #fff; outline: none; margin-bottom: 10px;
+            color: #555; font-weight: 400 !important;
+        }
+
+        #error-msg {
+            color: var(--danger); font-size: 0.75rem; font-weight: 600;
+            margin-top: -5px; margin-bottom: 10px; display: none;
+            text-align: center;
+        }
+        .shake { animation: shake 0.4s ease-in-out; }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
         }
 
         .sched-box { 
@@ -126,14 +136,27 @@
         .parallax > use:nth-child(3) { animation-delay: -4s; animation-duration: 13s; }
         .parallax > use:nth-child(4) { animation-delay: -5s; animation-duration: 20s; }
 
-        @keyframes move-forever { 
-            0% { transform: translate3d(-90px,0,0); } 
-            100% { transform: translate3d(85px,0,0); } 
-        }
+        @keyframes move-forever { 0% { transform: translate3d(-90px,0,0); } 100% { transform: translate3d(85px,0,0); } }
 
         #login-screen { 
             position: fixed; inset: 0; background: var(--primary); 
             z-index: 1000; display: flex; align-items: center; justify-content: center; 
+        }
+
+        .steam-container {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 3px; z-index: 2; pointer-events: none;
+        }
+        .steam-line {
+            width: 2px; height: 15px; background: rgba(255,255,255,0.6);
+            border-radius: 2px; animation: steam-rise 2s infinite ease-in-out; opacity: 0;
+        }
+        .steam-line:nth-child(2) { animation-delay: 0.5s; }
+        .steam-line:nth-child(3) { animation-delay: 1s; }
+        @keyframes steam-rise {
+            0% { transform: translateY(0) scaleX(1); opacity: 0; }
+            50% { transform: translateY(-10px) scaleX(1.5); opacity: 0.6; }
+            100% { transform: translateY(-20px) scaleX(2); opacity: 0; }
         }
     </style>
 </head>
@@ -158,18 +181,49 @@
         <div class="container">
             <div class="card">
                 <h3>🛒 Pilihan Menu</h3>
-                <div class="menu-grid">
-                    <div class="menu-card" onclick="add('Kopi Aren', 15000)">
+                
+                <select id="category-filter" onchange="filterMenu()" style="margin-bottom: 20px;">
+                    <option value="" disabled selected>🔍 Silahkan pilih kategori pesanan</option>
+                    <option value="semua">📑 Semua Menu</option>
+                    <option value="minuman">☕ Minuman (Kopi & Non-Kopi)</option>
+                    <option value="snack">🍟 Snack / Cemilan</option>
+                    <option value="makanan">🍲 Makanan Berat</option>
+                </select>
+
+                <div class="menu-grid" id="menu-container">
+                    <div class="menu-card" data-category="minuman" onclick="add('Air Putih', 5000)">
+                        <img src="/static/img/air_putih.jpg">
+                        <div class="menu-info"><b>Air Putih</b><span>5rb</span></div>
+                    </div>
+                    <div class="menu-card" data-category="minuman" onclick="add('Kopi Aren', 15000)">
+                        <div class="steam-container"><div class="steam-line"></div><div class="steam-line"></div><div class="steam-line"></div></div>
                         <img src="/static/img/kopi_aren.jpg">
                         <div class="menu-info"><b>Kopi Aren</b><span>15rb</span></div>
                     </div>
-                    <div class="menu-card" onclick="add('Kopi Susu', 12000)">
+                    <div class="menu-card" data-category="minuman" onclick="add('Kopi Susu', 12000)">
+                        <div class="steam-container"><div class="steam-line"></div><div class="steam-line"></div><div class="steam-line"></div></div>
                         <img src="/static/img/kopi_susu.jpg">
                         <div class="menu-info"><b>Kopi Susu</b><span>12rb</span></div>
                     </div>
-                    <div class="menu-card" onclick="add('Blue Lagoon', 20000)">
+                    <div class="menu-card" data-category="minuman" onclick="add('Blue Lagoon', 20000)">
                         <img src="/static/img/blue_lagon.jpg">
                         <div class="menu-info"><b>Blue Lagoon</b><span>20rb</span></div>
+                    </div>
+                    <div class="menu-card" data-category="snack" onclick="add('Kentang Goreng', 15000)">
+                        <img src="/static/img/kentang_goreng.jpg">
+                        <div class="menu-info"><b>Kentang Goreng</b><span>15rb</span></div>
+                    </div>
+                    <div class="menu-card" data-category="snack" onclick="add('Roti Bakar', 12000)">
+                        <img src="/static/img/roti_bakar.jpg">
+                        <div class="menu-info"><b>Roti Bakar</b><span>12rb</span></div>
+                    </div>
+                    <div class="menu-card" data-category="makanan" onclick="add('Mie Goreng', 10000)">
+                        <img src="/static/img/mie_goreng.jpg">
+                        <div class="menu-info"><b>Mie Goreng</b><span>10rb</span></div>
+                    </div>
+                    <div class="menu-card" data-category="makanan" onclick="add('Nasi Goreng', 25000)">
+                        <img src="/static/img/nasi_goreng.jpg">
+                        <div class="menu-info"><b>Nasi Goreng</b><span>25rb</span></div>
                     </div>
                 </div>
 
@@ -182,6 +236,8 @@
                         <option value="Jadwal">📅 Web (Penjadwalan)</option>
                         <option value="Ojol">🛵 Ojek Online</option>
                     </select>
+                    
+                    <div id="error-msg">Pilih menu terlebih dahulu!</div>
 
                     <div id="sched-box" class="sched-box">
                         <small style="display:block; margin-bottom:5px; color:var(--primary); font-weight:600;">Atur Waktu Ambil:</small>
@@ -219,10 +275,18 @@
     <script>
         let cart = [];
         let myOrderIds = JSON.parse(localStorage.getItem('my_orders') || "[]");
-        
         let audioPlayer = new Audio();
         let lastCallTimestamp = Number(localStorage.getItem('last_call_time')) || 0; 
         let isCalling = false; 
+
+        function filterMenu() {
+            const category = document.getElementById('category-filter').value;
+            const items = document.querySelectorAll('.menu-card');
+            items.forEach(item => {
+                if (category === 'semua') item.style.display = 'block';
+                else item.style.display = (item.getAttribute('data-category') === category) ? 'block' : 'none';
+            });
+        }
 
         function start() {
             audioPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
@@ -234,7 +298,15 @@
         function add(n, h) {
             let i = cart.find(x => x.n === n);
             i ? i.q++ : cart.push({n, h, q: 1});
+            
+            // Sembunyikan error jika menu sudah mulai ditambahkan
+            const errorMsg = document.getElementById('error-msg');
+            errorMsg.style.display = 'none';
+            errorMsg.classList.remove('shake');
+
             render();
+            const cartList = document.getElementById('cart-list');
+            cartList.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function changeQty(n, delta) {
@@ -247,7 +319,19 @@
         }
 
         function toggleSched() {
-            const val = document.getElementById('asal').value;
+            const asalSelect = document.getElementById('asal');
+            const errorMsg = document.getElementById('error-msg');
+            
+            if (cart.length === 0 && asalSelect.value !== "") {
+                errorMsg.style.display = 'block';
+                errorMsg.classList.add('shake');
+                asalSelect.value = ""; // Reset pilihan
+                setTimeout(() => { errorMsg.classList.remove('shake'); }, 400);
+                return;
+            }
+
+            errorMsg.style.display = 'none';
+            const val = asalSelect.value;
             document.getElementById('sched-box').style.display = (val === 'Jadwal') ? 'block' : 'none';
             render();
         }
@@ -255,8 +339,9 @@
         function render() {
             let total = 0;
             const list = document.getElementById('cart-list');
+            
             if(cart.length === 0) {
-                list.innerHTML = '<p style="text-align:center; color:#ccc; font-size:0.8rem; margin:10px 0;">Belum ada menu yang dipilih</p>';
+                list.innerHTML = '';
             } else {
                 list.innerHTML = cart.map(i => {
                     total += (i.h * i.q);
@@ -288,57 +373,29 @@
             }
 
             btn.disabled = true;
-
-            const payload = {
-                item: cart.map(i => `${i.q} ${i.n}`).join(', '),
-                asal: asal,
-                waktu: waktuInfo
-            };
+            const payload = { item: cart.map(i => `${i.q} ${i.n}`).join(', '), asal: asal, waktu: waktuInfo };
 
             try {
                 const res = await fetch('/checkout', { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify(payload) 
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) 
                 });
                 const result = await res.json();
-                
                 myOrderIds.push(String(result.id));
                 localStorage.setItem('my_orders', JSON.stringify(myOrderIds));
-                
-                Swal.fire({
-                    title: 'Pesanan Disimpan!',
-                    text: 'Nomor Antrean: ' + String(result.id).slice(-3),
-                    icon: 'success',
-                    confirmButtonColor: '#6F4E37'
-                });
-
-                cart = []; 
-                asalSelect.value = ""; 
-                document.getElementById('sched-box').style.display = 'none';
-                render(); 
-                updateStatusPesanan();
-            } catch(e) {
-                Swal.fire('Error', 'Gagal mengirim pesanan', 'error');
-            } finally {
-                btn.disabled = false;
-            }
+                Swal.fire({ title: 'Pesanan Disimpan!', text: 'Nomor Antrean: ' + String(result.id).slice(-3), icon: 'success', confirmButtonColor: '#6F4E37' });
+                cart = []; asalSelect.value = ""; document.getElementById('sched-box').style.display = 'none';
+                render(); updateStatusPesanan();
+            } catch(e) { Swal.fire('Error', 'Gagal mengirim pesanan', 'error'); } finally { btn.disabled = false; }
         }
 
         async function updateStatusPesanan() {
             if (myOrderIds.length === 0) return;
             try {
-                const [resMonitor, resPanggil] = await Promise.all([
-                    fetch('/monitor'),
-                    fetch('/cek_panggilan')
-                ]);
-                
+                const [resMonitor, resPanggil] = await Promise.all([fetch('/monitor'), fetch('/cek_panggilan')]);
                 const data = await resMonitor.json();
                 const dataPanggil = await resPanggil.json();
-
                 const container = document.getElementById('order-status-container');
-                let htmlContent = "";
-                let listTampil = [];
+                let htmlContent = ""; let listTampil = [];
 
                 myOrderIds.forEach(myId => {
                     const idxAktif = data.antrean.findIndex(o => String(o.id) === myId);
@@ -347,32 +404,18 @@
 
                     if (orderAktif) {
                         let statusLabel = "DIPROSES", bgColor = "#fff3e0", textColor = "#e67e22";
-                        if (String(dataPanggil.panggil_id) === myId) {
-                            statusLabel = "DIPANGGIL"; bgColor = "#e8f5e9"; textColor = "#27ae60";
-                        }
-                        listTampil.push({ 
-                            data: orderAktif, label: statusLabel, bg: bgColor, warna: textColor,
-                            priority: orderAktif.asal === 'Ojol' ? 1 : 2,
-                            urutan: idxAktif + 1
-                        });
+                        if (String(dataPanggil.panggil_id) === myId) { statusLabel = "DIPANGGIL"; bgColor = "#e8f5e9"; textColor = "#27ae60"; }
+                        listTampil.push({ data: orderAktif, label: statusLabel, bg: bgColor, warna: textColor, priority: orderAktif.asal === 'Ojol' ? 1 : 2, urutan: idxAktif + 1 });
                     } else if (orderSelesai) {
-                        listTampil.push({ 
-                            data: orderSelesai, label: "SELESAI", bg: "#e8f5e9", warna: "#27ae60",
-                            priority: 3, urutan: 0
-                        });
+                        listTampil.push({ data: orderSelesai, label: "SELESAI", bg: "#e8f5e9", warna: "#27ae60", priority: 3, urutan: 0 });
                     }
                 });
 
                 listTampil.sort((a, b) => a.priority - b.priority);
-
                 if (listTampil.length > 0) {
-                    listTampil.forEach(item => {
-                        htmlContent += renderStatusItem(item.data, item.label, item.bg, item.warna, item.urutan);
-                    });
+                    listTampil.forEach(item => { htmlContent += renderStatusItem(item.data, item.label, item.bg, item.warna, item.urutan); });
                     container.innerHTML = `<div class="card" style="border-top: 4px solid var(--accent);"><h3>📋 Status Pesanan</h3>${htmlContent}</div>`;
-                } else {
-                    container.innerHTML = '';
-                }
+                } else { container.innerHTML = ''; }
             } catch(e) {}
         }
 
@@ -383,14 +426,12 @@
                 const menit = (urutan * 3) + 5;
                 estimasiTxt = `<div style="font-size:0.7rem; color:var(--accent); font-weight:600; margin-top:4px;">⏳ Estimasi: ±${menit} Menit (Antrean ke-${urutan})</div>`;
             }
-
             return `
                 <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #eee;">
                     <div>
                         <b style="font-size:0.8rem;">#${String(o.id).slice(-3)}</b>
                         <div style="font-size:0.75rem; color:#666; max-width:180px;">${o.item}</div>
-                        ${priorityLabel}
-                        ${estimasiTxt}
+                        ${priorityLabel}${estimasiTxt}
                     </div>
                     <span class="status-badge" style="background:${bg}; color:${warna};">${teks}</span>
                 </div>`;
@@ -401,26 +442,16 @@
             try {
                 const res = await fetch('/cek_panggilan?t=' + Date.now());
                 const data = await res.json();
-                
                 if (data.panggil_id && Number(data.updated_at) > lastCallTimestamp) {
-                    isCalling = true; 
-                    lastCallTimestamp = Number(data.updated_at); 
+                    isCalling = true; lastCallTimestamp = Number(data.updated_at); 
                     localStorage.setItem('last_call_time', lastCallTimestamp);
-
                     const menuDipilih = data.panggil_item || "pesanan Anda"; 
                     const teksPanggilan = `Nomor antrean ${String(data.panggil_id).slice(-3)}, silahkan ambil ${menuDipilih}`;
-                    
                     audioPlayer.src = `/get_audio/${encodeURIComponent(teksPanggilan)}`;
                     audioPlayer.play().catch(e => { isCalling = false; });
                     audioPlayer.onended = () => { isCalling = false; };
-
                     if (myOrderIds.includes(String(data.panggil_id))) {
-                        Swal.fire({
-                            title: "PESANAN SIAP!",
-                            text: `Nomor Antrean #${String(data.panggil_id).slice(-3)} silahkan ambil ${menuDipilih}`,
-                            icon: "info",
-                            confirmButtonColor: '#6F4E37'
-                        });
+                        Swal.fire({ title: "PESANAN SIAP!", text: `Nomor Antrean #${String(data.panggil_id).slice(-3)} silahkan ambil ${menuDipilih}`, icon: "info", confirmButtonColor: '#6F4E37' });
                     }
                 }
                 updateStatusPesanan();
