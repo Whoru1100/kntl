@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
 from gtts import gTTS
-import threading, time, pygame, os
+import threading, time, pygame, os, datetime
 from io import BytesIO
 
 app = Flask(__name__)
@@ -15,7 +15,6 @@ last_notify_time = 0
 
 # Penyimpanan status panggilan terakhir
 data_panggilan = {"panggil_id": None, "panggil_item": "", "updated_at": 0} 
-last_call = {"id": None, "item": "", "time": 0}
 
 pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.mixer.init()
@@ -70,7 +69,6 @@ def checkout():
     d = request.json
     new_id = int(time.time() * 1000) 
     
-    # Ambil asal pesanan (Ojek Online, Walk In, dll)
     asal_pesanan = d.get('asal', 'Pelanggan') 
     
     p = {
@@ -78,7 +76,8 @@ def checkout():
         "no_urut": nomor_urut_global,
         "item": d['item'], 
         "asal": asal_pesanan, 
-        "waktu": d.get('waktu', '-')
+        "waktu": d.get('waktu', '-'),
+        "created_at": datetime.datetime.now().isoformat() 
     }
     data_antrean.append(p)
     nomor_urut_global += 1
@@ -111,7 +110,6 @@ def panggil():
     d = request.json
     id_panggil = str(d.get('id', ''))
     
-    # Ambil detail menu dari data_antrean
     pesanan = next((p for p in data_antrean if str(p['id']) == id_panggil), None)
     item_nama = pesanan['item'] if pesanan else "pesanan Anda"
 
@@ -141,8 +139,5 @@ def delete_permanent():
     return jsonify({"status": "deleted"})
 
 if __name__ == "__main__":
-
-    # masukin ip dari cmd "ipconfig" di bagian IPv4 Address
-    #contoh host='1xx.xxx.xxx.xxx'
-
-    app.run(debug=True, host='1xx.xxx.xxx.xxx', port=5000)
+    # Ganti host dengan IP Laptop (IPv4 dari ipconfig) kalau mau pake 2 device.
+    app.run(debug=True, host='0.0.0.0', port=5000)
