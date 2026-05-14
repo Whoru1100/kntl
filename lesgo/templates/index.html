@@ -204,6 +204,7 @@
         let isCalling = false; 
 
         function start() {
+            // Inisialisasi audio untuk mobile (harus dipicu aksi user)
             audioPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
             audioPlayer.play().catch(e => {});
 
@@ -255,6 +256,7 @@
         }
 
         async function pay() {
+            const btn = document.getElementById('btn-pay');
             const asalSelect = document.getElementById('asal');
             const asal = asalSelect.value;
             let waktuInfo = "Langsung";
@@ -265,6 +267,8 @@
                 if(!time || !date) return Swal.fire('Oops', 'Lengkapi waktu pengambilan!', 'warning');
                 waktuInfo = `Tgl ${date} Jam ${time}`;
             }
+
+            btn.disabled = true;
 
             const payload = {
                 item: cart.map(i => `${i.q} ${i.n}`).join(', '),
@@ -290,67 +294,63 @@
                     confirmButtonColor: '#6F4E37'
                 });
 
-                
                 cart = []; 
                 asalSelect.value = ""; 
                 document.getElementById('sched-box').style.display = 'none';
-                document.getElementById('sched-time').value = "";
-                document.getElementById('sched-date').value = "";
-                
                 render(); 
                 updateStatusPesanan();
             } catch(e) {
                 Swal.fire('Error', 'Gagal mengirim pesanan', 'error');
+            } finally {
+                btn.disabled = false;
             }
         }
 
         async function updateStatusPesanan() {
             if (myOrderIds.length === 0) return;
             try {
-                const resMonitor = await fetch('/monitor');
-                const data = await resMonitor.json();
+                const [resMonitor, resPanggil] = await Promise.all([
+                    fetch('/monitor'),
+                    fetch('/cek_panggilan')
+                ]);
                 
-                const resPanggil = await fetch('/cek_panggilan');
+                const data = await resMonitor.json();
                 const dataPanggil = await resPanggil.json();
 
                 const container = document.getElementById('order-status-container');
-                
                 let htmlContent = "";
                 let listTampil = [];
 
                 myOrderIds.forEach(myId => {
-                    const orderAktif = data.antrean.find(o => String(o.id) === myId);
+                    const idxAktif = data.antrean.findIndex(o => String(o.id) === myId);
+                    const orderAktif = data.antrean[idxAktif];
                     const orderSelesai = data.selesai.find(o => String(o.id) === myId);
 
                     if (orderAktif) {
-                        let statusLabel = "DIPROSES";
-                        let bgColor = "#fff3e0";
-                        let textColor = "#e67e22";
+                        let statusLabel = "DIPROSES", bgColor = "#fff3e0", textColor = "#e67e22";
 
                         if (String(dataPanggil.panggil_id) === myId) {
-                            statusLabel = "DIPANGGIL";
-                            bgColor = "#e8f5e9";
-                            textColor = "#27ae60";
+                            statusLabel = "DIPANGGIL"; bgColor = "#e8f5e9"; textColor = "#27ae60";
                         }
 
                         listTampil.push({ 
                             data: orderAktif, label: statusLabel, bg: bgColor, warna: textColor,
-                            priority: orderAktif.asal === 'Ojol' ? 1 : 2 
+                            priority: orderAktif.asal === 'Ojol' ? 1 : 2,
+                            urutan: idxAktif + 1
                         });
                     } else if (orderSelesai) {
                         listTampil.push({ 
                             data: orderSelesai, label: "SELESAI", bg: "#e8f5e9", warna: "#27ae60",
-                            priority: orderSelesai.asal === 'Ojol' ? 1 : 2 
+                            priority: 3, urutan: 0
                         });
                     }
                 });
 
-                // PRIORITAS OJOL PALING ATAS
                 listTampil.sort((a, b) => a.priority - b.priority);
 
                 if (listTampil.length > 0) {
                     listTampil.forEach(item => {
-                        htmlContent += renderStatusItem(item.data, item.label, item.bg, item.warna);
+                        htmlContent += renderStatusItem(item.data, item.label, item.bg, item.warna, item.urutan);
                     });
                     container.innerHTML = `<div class="card" style="border-top: 4px solid var(--accent);"><h3>📋 Status Pesanan</h3>${htmlContent}</div>`;
                 } else {
@@ -359,14 +359,22 @@
             } catch(e) {}
         }
 
-        function renderStatusItem(o, teks, bg, warna) {
+        function renderStatusItem(o, teks, bg, warna, urutan) {
             const priorityLabel = (o.asal === 'Ojol') ? '<div class="tag-ojol">Prioritas Driver Ojek Online</div>' : '';
+            
+            let estimasiTxt = "";
+            if (teks === "DIPROSES" && urutan > 0) {
+                const menit = (urutan * 3) + 5;
+                estimasiTxt = `<div style="font-size:0.7rem; color:var(--accent); font-weight:600; margin-top:4px;">⏳ Estimasi: ±${menit} Menit (Antrean ke-${urutan})</div>`;
+            }
+
             return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #eee;">
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #eee;">
                     <div>
                         <b style="font-size:0.8rem;">#${String(o.id).slice(-3)}</b>
-                        <div style="font-size:0.75rem; color:#666;">${o.item}</div>
+                        <div style="font-size:0.75rem; color:#666; max-width:180px;">${o.item}</div>
                         ${priorityLabel}
+                        ${estimasiTxt}
                     </div>
                     <span class="status-badge" style="background:${bg}; color:${warna};">${teks}</span>
                 </div>`;
@@ -388,11 +396,8 @@
                     const teksPanggilan = `Nomor antrean ${String(data.panggil_id).slice(-3)}, silakan ambil ${menuDipilih}`;
                     
                     audioPlayer.src = `/get_audio/${encodeURIComponent(teksPanggilan)}`;
-                    audioPlayer.play().catch(e => {
-                        isCalling = false;
-                    });
+                    audioPlayer.play().catch(e => { isCalling = false; });
 
-                    
                     audioPlayer.onended = () => { isCalling = false; };
 
                     if (myOrderIds.includes(String(data.panggil_id))) {
@@ -400,7 +405,6 @@
                             title: "PESANAN SIAP!",
                             text: `Nomor Antrean #${String(data.panggil_id).slice(-3)} silakan ambil ${menuDipilih}`,
                             icon: "info",
-                            timer: 7000,
                             confirmButtonColor: '#6F4E37'
                         });
                     }
