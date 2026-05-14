@@ -10,7 +10,7 @@ Untuk jalanin programnya : python app.py
 ==========
 ==========
 
-NOTE : 
+NOTE : pake ipv4 cmd aja, jangan ip localhost
 
 1. Saran pake web chrome di laptop aja. biar ga ada bug, dll
 ==========
