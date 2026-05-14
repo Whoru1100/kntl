@@ -138,6 +138,16 @@ def delete_permanent():
     data_selesai = [p for p in data_selesai if int(p['id']) != tid]
     return jsonify({"status": "deleted"})
 
+@app.route('/clear_all_done', methods=['POST'])
+def clear_all_done():
+    global data_selesai
+    try:
+        data_selesai.clear() 
+        return jsonify({"status": "success", "message": "Semua antrean selesai dihapus"}), 200
+    except Exception as e:
+        print(f"Error clear_all: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     # Ganti host dengan IP Laptop (IPv4 dari ipconfig) kalau mau pake 2 device.
     app.run(debug=True, host='0.0.0.0', port=5000)
