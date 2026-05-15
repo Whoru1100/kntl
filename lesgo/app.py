@@ -8,7 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # --- State Management ---
-# Menggunakan struktur data yang konsisten
+# Bagian ini menyimpan data antrian, selesai, nomor urut global, status suara, dan data panggilan terakhir.
 state = {
     "antrian": [],
     "selesai": [],
