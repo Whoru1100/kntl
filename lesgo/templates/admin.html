@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Cafe Fairuz</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <style>
+        /* Mengatur variabel warna kustom (CSS Variables) tema kafe cokelat agar mudah diubah secara global */
         :root { 
             --primary: #6F4E37; 
             --primary-light: #8b6245;
@@ -20,9 +24,11 @@
             --text-muted: #7f8c8d;
         }
         
+        /* Reset margin default browser dan mengatur font dasar serta warna latar belakang aplikasi */
         * { box-sizing: border-box; }
         body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: var(--text-main); line-height: 1.6; }
 
+        /* Mengatur gaya navigasi atas (Header) agar tetap menempel di atas saat layar di-scroll */
         .navbar { 
             background: var(--primary); color: var(--white); padding: 1rem; 
             text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -30,10 +36,13 @@
         }
         .navbar h1 { font-size: 1.4rem; margin: 0; letter-spacing: 1px; }
 
+        /* Mengatur lebar maksimal pembungkus konten utama agar rapi di layar komputer/tablet */
         .container { max-width: 1000px; margin: 20px auto; padding: 0 20px; }
 
-        /* Stats Section */
+        /* Mengatur tata letak kotak statistik ringkasan antrian menjadi 2 kolom berdampingan */
         .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+        
+        /* Desain kartu statistik angka jumlah antrian */
         .stat-card { 
             background: var(--white); padding: 20px; border-radius: 20px; 
             text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02);
@@ -44,11 +53,14 @@
         .stat-card h2 { margin: 10px 0 0; color: var(--primary); font-size: 2.2rem; }
         .stat-card small { font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; display: block; }
 
-        /* Cards */
+        /* Desain kartu utama tempat list antrian ditampung */
         .admin-card { background: var(--white); padding: 25px; border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        
+        /* Mengatur tata letak bagian judul kartu agar tombol refresh/kosongkan berada di sisi kanan */
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .card-header h3 { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
         
+        /* Pembungkus list pesanan yang memberikan efek scroll vertikal jika pesanan sudah terlalu banyak */
         .scroll-container {
             min-height: 100px; 
             max-height: 500px;
@@ -56,7 +68,7 @@
             padding-right: 5px;
         }
 
-        /* Queue Items */
+        /* Desain satu baris/kotak item pesanan pelanggan di dalam list */
         .q-item { 
             padding: 16px; background: #fff; border-radius: 18px; margin-bottom: 16px; 
             border: 1px solid #f0f0f0; display: flex; align-items: center; gap: 15px;
@@ -64,6 +76,7 @@
         }
         .q-item:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
+        /* Mengatur area nomor urut antrian (misal: Antrian #1, #2) di sebelah kiri */
         .list-number-wrapper {
             display: flex; flex-direction: column; align-items: center;
             min-width: 70px; text-align: center; border-right: 1px solid #eee; padding-right: 15px;
@@ -71,6 +84,7 @@
         .list-number-label { font-size: 0.6rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
         .list-number-value { font-size: 1.4rem; font-weight: 800; color: var(--primary); }
 
+        /* Desain kotak gelap penampil potongan ID pesanan unik */
         .q-id-box { 
             background: var(--dark-id); color: #fff; 
             min-width: 60px; height: 55px; border-radius: 12px; 
@@ -79,17 +93,21 @@
         .q-id-box small { font-size: 0.55rem; text-transform: uppercase; opacity: 0.7; }
         .q-id-box span { font-size: 1.1rem; font-weight: 700; }
 
+        /* Mengatur info teks menu pesanan, nomor meja, jam, dan pembungkus teks agar tidak meluap */
         .info { flex: 1; min-width: 0; }
         .info b { display: block; font-size: 1rem; color: #333; margin-bottom: 2px; }
         .info small { color: var(--text-muted); font-size: 0.8rem; display: block; }
 
+        /* Label status kecil di bawah nama menu (Menunggu / Masak sekian menit) */
         .status-tag { 
             font-size: 0.65rem; padding: 4px 10px; border-radius: 20px; 
             font-weight: 700; text-transform: uppercase; margin-top: 8px; display: inline-block; 
         }
 
-        /* Buttons */
+        /* Mengatur susunan grup tombol aksi (Panggil, Masak, Selesai) di sisi paling kanan item */
         .btn-group { display: flex; gap: 8px; }
+        
+        /* Desain dasar tombol aksi */
         .btn { 
             border: none; border-radius: 12px; cursor: pointer; 
             font-weight: 600; transition: all 0.2s; 
@@ -99,22 +117,27 @@
         .btn:active { transform: scale(0.95); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* Desain tombol panggil berbentuk bulat oranye */
         .btn-call { background: var(--accent); color: white; width: 45px; height: 45px; font-size: 1.2rem; padding: 0; position: relative; }
+        
+        /* Badge merah kecil di atas tombol panggil untuk menunjukkan sudah berapa kali dipanggil (misal: 2x) */
         .call-badge { 
             position: absolute; top: -5px; right: -5px; background: var(--error); color: white; 
             font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; border: 2px solid white;
             font-weight: bold;
         }
 
+        /* Pengaturan variasi warna untuk masing-masing tombol aksi (Masak, Selesai, Hapus, dan Refresh) */
         .btn-process { background: #f3f4f6; color: var(--primary); border: 1px solid #ddd; }
         .btn-done { background: var(--success); color: white; }
         .btn-del { background: #fff1f0; color: var(--error); border: 1px solid #ffa39e; }
-        
         .btn-refresh { background: none; border: 1px solid var(--primary); color: var(--primary); padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; font-weight: 600; }
         .btn-refresh:hover { background: var(--primary); color: white; }
 
+        /* Tampilan teks khusus jika data antrian kosong (tidak ada pesanan) */
         .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-style: italic; }
 
+        /* Responsive Breakpoint: Mengubah tata letak menjadi vertikal/penuh jika dibuka via Handphone bermonitor kecil */
         @media (max-width: 600px) {
             .container { padding: 0 12px; }
             .q-item { flex-wrap: wrap; padding: 15px; }
@@ -164,13 +187,14 @@
         // Memuat status riwayat hitungan panggilan dari localStorage agar tidak reset saat refresh halaman
         let callCounters = JSON.parse(localStorage.getItem('cafe_fairuz_calls') || "{}");
 
-        // Fungsi Sinkronisasi Data dari Server Backend/Index
+        // Fungsi Sinkronisasi Data dari Server Backend: Mengambil data terbaru dan me-render list HTML secara dinamis
         async function refresh() {
             try {
+                // Request data ke endpoint server dengan pencegahan caching internal browser (?t=Timestamp)
                 const res = await fetch('/monitor?t=' + Date.now());
                 const data = await res.json();
                 
-                // Sinkronisasi total status di atas card
+                // Menyuntikkan total angka antrian ke element dashboard atas kartu statistik
                 document.getElementById('count-active').innerText = data.antrian ? data.antrian.length : 0;
                 document.getElementById('count-done').innerText = data.selesai ? data.selesai.length : 0;
                 
@@ -182,8 +206,9 @@
                     list.innerHTML = data.antrian.map((o, idx) => {
                         const callNum = callCounters[o.id] || 0;
                         
-                        // Konversi ID aman untuk string data slice
+                        // Memotong string ID unik agar hanya tampil 3 karakter terakhir saja supaya bersih
                         const displayId = o.id ? String(o.id).slice(-3) : '000';
+                        // Meng-encode objek data pesanan agar aman dikirim via argumen fungsi HTML onclick
                         const itemObj = encodeURIComponent(JSON.stringify(o));
 
                         return `
@@ -216,7 +241,7 @@
                     }).join('');
                 }
 
-                // 2. RENDER LIST PESANAN SIAP AMBIL
+                // 2. RENDER LIST PESANAN SIAP AMBIL (Sektor bawah setelah tombol selesai dipicu)
                 const doneList = document.getElementById('done-list');
                 if (!data.selesai || data.selesai.length === 0) {
                     doneList.innerHTML = '<div class="empty-state">Belum ada pesanan yang siap.</div>';
@@ -244,7 +269,7 @@
             }
         }
 
-        // Fungsi Aksi: Mengubah Status Pesanan ke Tahap Pengaturan Estimasi Masak
+        // Fungsi Aksi: Menampilkan Pop-Up Input Angka Estimasi Waktu Memasak untuk Dikirimkan ke Server Backend
         async function prosesPesanan(id, namaItem) {
             const { value: menit } = await Swal.fire({
                 title: 'Estimasi Waktu',
@@ -268,7 +293,7 @@
             }
         }
 
-        // Fungsi Aksi: Menandai Pesanan telah Selesai dan Memindahkannya ke Sektor "Siap Diambil"
+        // Fungsi Aksi: Mengubah Status Pesanan di Database Menjadi Selesai Sehingga Pindah Sektor ke List Siap Diambil
         async function tandaiSelesai(id) {
             const result = await Swal.fire({
                 title: 'Konfirmasi Selesai',
@@ -287,6 +312,7 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ id: parseInt(id), final_selesai: true })
                     });
+                    // Menghapus counter panggil dari memory local storage karena pesanan sudah rampung
                     delete callCounters[id];
                     localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
                     refresh();
@@ -294,14 +320,14 @@
             }
         }
 
-        // Fungsi Aksi: Memanggil Pelanggan (Menyampaikan sinyal panggil ke monitor client/index)
+        // Fungsi Aksi: Memicu Tombol Panggil Suara/Sinyal Monitor Utama Client dan Menghitung Jumlah Berapa Kali Dipanggil
         async function callCustomer(event, encodedOrder) {
             const order = JSON.parse(decodeURIComponent(encodedOrder));
             const btn = event.currentTarget; 
             let userConfirm = false;
             const currentCalls = callCounters[order.id] || 0;
 
-            // Logika Re-konfirmasi jika dipanggil lebih dari 2 kali
+            // Logika Proteksi: Jika admin memanggil customer yang sama > 2 kali, munculkan konfirmasi ulang
             if (currentCalls >= 2) {
                 const reconfirm = await Swal.fire({
                     title: 'Panggil lagi?',
@@ -317,7 +343,7 @@
                 if (!reconfirm.isConfirmed) return; 
             }
 
-            // Peringatan jika admin belum mengatur estimasi menit memasak
+            // Logika Proteksi: Peringatan jika admin nekat memanggil pembeli padahal belum input estimasi waktu masak
             if (!order.estimasi_kustom) {
                 const result = await Swal.fire({
                     title: 'Estimasi Belum Diatur',
@@ -337,6 +363,7 @@
                 userConfirm = true;
             }
 
+            // Eksekusi pengiriman sinyal panggil ke server
             if (userConfirm) {
                 try {
                     btn.disabled = true;
@@ -349,6 +376,7 @@
                         body: JSON.stringify({ id: parseInt(order.id) })
                     });
                     
+                    // Increment +1 nilai jumlah pemanggilan ke dalam cache lokal browser
                     callCounters[order.id] = (callCounters[order.id] || 0) + 1;
                     localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
                     refresh();
@@ -359,7 +387,7 @@
             }
         }
 
-        // Fungsi Aksi: Menghapus Data Secara Permanen dari Database Sementara Sektor Selesai
+        // Fungsi Aksi: Menghapus Satu Pesanan Tertentu Secara Permanen dari Database Sektor Siap Diambil
         async function deletePermanent(id) {
             const result = await Swal.fire({ 
                 title: 'Hapus data pesanan?', 
@@ -384,7 +412,7 @@
             }
         }
 
-        // Fungsi Aksi: Mengosongkan Seluruh Konten di List "Siap Diambil" sekaligus
+        // Fungsi Aksi: Menghapus Massal Seluruh Konten Pesanan Selesai untuk Membersihkan Layar Dashboard Admin
         async function clearAllDone() {
             try {
                 const res = await fetch('/monitor?t=' + Date.now());
@@ -416,10 +444,10 @@
             } catch (e) { console.error("Gagal melakukan pembersihan massal:", e); }
         }
 
-        // Polling Interaktif Otomatis sinkronisasi data per 5 detik
+        // Real-Time Polling: Secara otomatis mengeksekusi fungsi refresh data tiap 5 detik sekali ke server tanpa reload page
         setInterval(refresh, 5000);
         
-        // Memuat pertama kali saat halaman diakses admin café
+        // Memuat data pertama kali ketika file HTML ini selesai dimuat seutuhnya oleh browser admin
         document.addEventListener('DOMContentLoaded', refresh);
     </script>
 </body>
