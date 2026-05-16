@@ -75,9 +75,17 @@
 
         .menu-card:active { transform: scale(0.96); }
         .menu-card img { width: 100%; height: 110px; object-fit: cover; }
-        .menu-info { padding: 10px; text-align: center; }
-        .menu-info b { display: block; font-size: 0.85rem; }
-        .menu-info span { font-size: 0.8rem; color: var(--accent); font-weight: 600; }
+        
+        .menu-card_info, .menu-info { 
+            padding: 12px 10px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center; 
+        }
+        .menu-info b { display: block; font-size: 0.85rem; width: 100%; text-align: center; margin-bottom: 2px; }
+        .menu-info span { font-size: 0.8rem; color: var(--accent); font-weight: 600; display: block; width: 100%; text-align: center; }
         
         .steam-container {
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -148,6 +156,14 @@
         }
 
         .status-badge { padding: 4px 10px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
+        
+        .btn-cancel-order {
+            background: none; border: 1px solid var(--danger); color: var(--danger);
+            font-size: 0.7rem; font-weight: 600; padding: 3px 8px; border-radius: 8px;
+            cursor: pointer; margin-top: 8px; transition: 0.2s; display: inline-block;
+        }
+        .btn-cancel-order:active { background: rgba(231, 76, 60, 0.1); }
+
         .tag-ojol {
             display: inline-block; margin-top: 4px; font-size: 0.65rem; font-weight: bold;
             color: var(--ojol-color); background: rgba(0, 170, 19, 0.1); padding: 2px 6px; border-radius: 5px;
@@ -388,8 +404,52 @@
             }
         }
 
+        /* --- SINKRONISASI PEMBATALAN PESANAN SISI USER --- */
+        async function cancelOrder(orderId) {
+            const resultConfirm = await Swal.fire({
+                title: 'Batalkan Pesanan?',
+                text: "Pesanan ini akan dihapus dari antrian dapur.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                cancelButtonColor: '#6F4E37',
+                confirmButtonText: 'Ya, Batalkan!',
+                cancelButtonText: 'Tidak'
+            });
+
+            if (!resultConfirm.isConfirmed) return;
+
+            try {
+                const res = await fetch('/delete_permanent', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id: parseInt(orderId) })
+                });
+
+                if(res.ok) {
+                    myOrderIds = myOrderIds.filter(id => String(id) !== String(orderId));
+                    localStorage.setItem('my_orders', JSON.stringify(myOrderIds));
+                    
+                    Swal.fire({
+                        title: 'Dibatalkan!',
+                        text: 'Pesanan Anda berhasil dibatalkan.',
+                        icon: 'success',
+                        confirmButtonColor: '#6F4E37'
+                    });
+                    updateStatusPesanan();
+                } else {
+                    Swal.fire('Gagal', 'Pesanan gagal dibatalkan atau sudah diproses kasir.', 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', 'Terjadi kesalahan jaringan.', 'error');
+            }
+        }
+
         async function updateStatusPesanan() {
-            if (myOrderIds.length === 0) return;
+            if (myOrderIds.length === 0) {
+                document.getElementById('order-status-container').innerHTML = '';
+                return;
+            }
             try {
                 const ts = Date.now();
                 const [resMonitor, resPanggil] = await Promise.all([
@@ -448,6 +508,11 @@
                         const priorityLabel = (item.data.asal === 'Ojol') ? '<div class="tag-ojol">Prioritas Driver Ojek Online</div>' : '';
                         let estimasiTxt = "";
                         
+                        let cancelBtnHtml = "";
+                        if (item.label === "SEDANG PROSES") {
+                            cancelBtnHtml = `<br><button class="btn-cancel-order" onclick="cancelOrder('${item.data.id}')">❌ Batalkan Pesanan</button>`;
+                        }
+                        
                         if (item.label !== "SIAP AMBIL") {
                             const estimasiValue = item.data.estimasi_kustom ? `±${item.data.estimasi_kustom} Menit` : "-";
                             const labelEstimasi = item.data.estimasi_kustom ? "Waktu Selesai" : "Estimasi";
@@ -461,6 +526,7 @@
                                 <b style="font-size:0.8rem;">#${String(item.data.id).slice(-3)}</b>
                                 <div style="font-size:0.75rem; color:#666; max-width:180px;">${item.data.item}</div>
                                 ${priorityLabel}${estimasiTxt}
+                                ${cancelBtnHtml}
                             </div>
                             <span class="status-badge" style="background:${item.bg}; color:${item.warna};">${item.label}</span>
                         </div>`;
