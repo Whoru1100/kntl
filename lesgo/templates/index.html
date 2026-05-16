@@ -21,7 +21,6 @@
         }
 
         /* --- UI COMPONENTS --- */
-        /* Mengatur style komponen utama UI seperti navbar dan container utama */
         .navbar { 
             background: var(--primary); color: var(--white); 
             padding: 30px 20px 60px; text-align: center;
@@ -103,7 +102,6 @@
         }
 
         /* --- CART & FORM --- */
-        /* Mengatur style komponen keranjang belanja, form opsi pesanan, tombol, dan status badge */
         #cart-list { max-height: 200px; overflow-y: auto; margin-bottom: 10px; }
         .cart-item { 
             display: flex; justify-content: space-between; align-items: center;
@@ -286,6 +284,60 @@
         let lastCallTimestamp = Number(localStorage.getItem('last_call_time')) || 0; 
         let isCalling = false; 
 
+        /* --- FUNGSI DETEKSI INPUT (FORM DIRTY) --- */
+        function isFormDirty() {
+            const asalSelect = document.getElementById('asal');
+            const asalValue = asalSelect ? asalSelect.value : "";
+            // Mengembalikan true jika keranjang tidak kosong ATAU opsi pesanan sudah dipilih
+            return (cart.length > 0 || asalValue !== "");
+        }
+
+        /* --- LOGIKA PENGAMAN RELOAD & TOMBOL BACK --- */
+        // 1. Menangani reload / refresh / close tab browser
+        window.addEventListener('beforeunload', function (e) {
+            if (isFormDirty()) {
+                e.preventDefault();
+                // Beberapa browser modern mengabaikan teks kustom ini dan menggunakan pesan bawaan mereka
+                const msg = "Anda sedang memilih menu atau opsi pilihan pesanan. Yakin mau kembali/reload?";
+                e.returnValue = msg;
+                return msg;
+            }
+        });
+
+        // 2. Menghandle tombol Back Browser
+        function initBackGuard() {
+            if (window.history.state !== 'app-running') {
+                window.history.pushState('app-running', null, '');
+            }
+        }
+
+        window.addEventListener('popstate', async function (e) {
+            if (isFormDirty()) {
+                // Dorong kembali state ke history agar tidak langsung keluar halaman
+                window.history.pushState('app-running', null, '');
+
+                const result = await Swal.fire({
+                    title: 'Yakin mau kembali/reload?',
+                    text: 'Anda sedang melakukan pengisian menu atau opsi pesanan. Data inputan saat ini akan hilang.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#e74c3c',
+                    cancelButtonColor: '#6F4E37',
+                    confirmButtonText: 'Ya, Keluar',
+                    cancelButtonText: 'Batal'
+                });
+
+                if (result.isConfirmed) {
+                    // Kosongkan form agar trigger beforeunload terlewati
+                    cart = [];
+                    if(document.getElementById('asal')) document.getElementById('asal').value = "";
+                    window.history.go(-2); // Mundur keluar halaman
+                }
+            } else {
+                window.history.go(-1); // Navigasi back normal jika form kosong
+            }
+        });
+
         function filterMenu() {
             const category = document.getElementById('category-filter').value;
             const container = document.getElementById('menu-container');
@@ -308,6 +360,7 @@
             audioPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
             audioPlayer.play().catch(e => {});
             document.getElementById('login-screen').style.display = 'none';
+            initBackGuard(); // Aktifkan penjaga tombol back setelah menekan MULAI PESAN
             updateStatusPesanan();
         }
 
@@ -406,8 +459,7 @@
             }
         }
 
-        /* --- SINKRONISASI PEMBATALAN PESANAN SISI USER --- */
-        /* Fungsi untuk melakukan request pembatalan pesanan aktif ke server dan menghapus id dari localStorage user */
+        /* --- SINKRONISASI PEMBATALAN PESANAN SISI USER (LOGIKA ALASAN DIHAPUS) --- */
         async function cancelOrder(orderId) {
             const resultConfirm = await Swal.fire({
                 title: 'Batalkan Pesanan?',
@@ -449,7 +501,6 @@
         }
 
         /* --- MONITOR STATUS DAN PANGGILAN AUDIO --- */
-        /* Blok di bawah ini bertugas memantau status antrian secara real-time dan memicu panggilan teks-ke-suara ketika pesanan selesai */
         async function updateStatusPesanan() {
             if (myOrderIds.length === 0) {
                 document.getElementById('order-status-container').innerHTML = '';
