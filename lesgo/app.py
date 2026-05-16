@@ -144,9 +144,29 @@ def cek_panggilan():
 
 @app.route('/delete_permanent', methods=['POST'])
 def delete_permanent():
-    tid = int(request.json.get('id'))
-    state["selesai"] = [p for p in state["selesai"] if p['id'] != tid]
-    return jsonify({"status": "deleted"})
+    """
+    Menghapus pesanan secara permanen.
+    Disinkronkan agar bisa menghapus dari daftar 'antrian' (fitur Batalkan Pesanan oleh User)
+    maupun dari daftar 'selesai' (fitur Hapus Riwayat oleh Admin).
+    """
+    try:
+        tid = int(request.json.get('id'))
+        
+        # Cek dan hapus jika pesanan masih ada di daftar antrian aktif
+        asal_antrian = len(state["antrian"])
+        state["antrian"] = [p for p in state["antrian"] if p['id'] != tid]
+        
+        # Cek dan hapus jika pesanan sudah berada di daftar selesai
+        asal_selesai = len(state["selesai"])
+        state["selesai"] = [p for p in state["selesai"] if p['id'] != tid]
+        
+        # Jika id panggilan yang aktif sama dengan pesanan yang dihapus, reset status panggilannya
+        if str(state["data_panggilan"]["panggil_id"]) == str(tid):
+            state["data_panggilan"] = {"panggil_id": None, "panggil_item": "", "updated_at": time.time() * 1000}
+
+        return jsonify({"status": "deleted"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 @app.route('/clear_all_done', methods=['POST'])
 def clear_all_done():
