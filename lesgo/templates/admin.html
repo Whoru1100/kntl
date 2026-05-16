@@ -161,22 +161,31 @@
     </div>
 
     <script>
+        // Memuat status riwayat hitungan panggilan dari localStorage agar tidak reset saat refresh halaman
         let callCounters = JSON.parse(localStorage.getItem('cafe_fairuz_calls') || "{}");
 
+        // Fungsi Sinkronisasi Data dari Server Backend/Index
         async function refresh() {
             try {
                 const res = await fetch('/monitor?t=' + Date.now());
                 const data = await res.json();
                 
-                document.getElementById('count-active').innerText = data.antrian.length;
-                document.getElementById('count-done').innerText = data.selesai.length;
+                // Sinkronisasi total status di atas card
+                document.getElementById('count-active').innerText = data.antrian ? data.antrian.length : 0;
+                document.getElementById('count-done').innerText = data.selesai ? data.selesai.length : 0;
                 
+                // 1. RENDER LIST ANTRIAN MASUK (SEDANG DIPROSES / MENUNGGU)
                 const list = document.getElementById('admin-list');
                 if (!data.antrian || data.antrian.length === 0) {
                     list.innerHTML = '<div class="empty-state">Belum ada pesanan masuk.</div>';
                 } else {
                     list.innerHTML = data.antrian.map((o, idx) => {
                         const callNum = callCounters[o.id] || 0;
+                        
+                        // Konversi ID aman untuk string data slice
+                        const displayId = o.id ? String(o.id).slice(-3) : '000';
+                        const itemObj = encodeURIComponent(JSON.stringify(o));
+
                         return `
                         <div class="q-item">
                             <div class="list-number-wrapper">
@@ -185,20 +194,20 @@
                             </div>
                             <div class="q-id-box">
                                 <small>ID</small>
-                                <span>${String(o.id).slice(-3)}</span>
+                                <span>${displayId}</span>
                             </div>
                             <div class="info">
-                                <b>${o.item}</b>
-                                <small>📍 ${o.asal} • 🕒 ${o.waktu || 'Baru'}</small>
+                                <b>${o.item || 'Menu Unik'}</b>
+                                <small>📍 ${o.asal || 'Meja/Takeaway'} • 🕒 ${o.waktu || 'Baru'}</small>
                                 <span class="status-tag" style="background:${o.estimasi_kustom ? '#fff3e0' : '#f0f0f0'}; color:${o.estimasi_kustom ? '#e67e22' : '#888'}">
                                     ${o.estimasi_kustom ? '🔥 Proses (' + o.estimasi_kustom + 'm)' : '⏳ Menunggu'}
                                 </span>
                             </div>
                             <div class="btn-group">
-                                <button onclick='callCustomer(event, ${JSON.stringify(o)})' class="btn btn-call" title="Panggil Pelanggan">
+                                <button onclick="callCustomer(event, '${itemObj}')" class="btn btn-call" title="Panggil Pelanggan">
                                     📢 ${callNum > 0 ? `<span class="call-badge">${callNum}x</span>` : ''}
                                 </button>
-                                <button onclick="prosesPesanan('${o.id}', '${o.item}')" class="btn btn-process">
+                                <button onclick="prosesPesanan('${o.id}', '${o.item ? o.item.replace(/'/g, "\\'") : 'Item'}')" class="btn btn-process">
                                     ${o.estimasi_kustom ? 'EDIT WAKTU' : 'MASAK'}
                                 </button>
                                 <button onclick="tandaiSelesai('${o.id}')" class="btn btn-done">SELESAI</button>
@@ -207,52 +216,63 @@
                     }).join('');
                 }
 
+                // 2. RENDER LIST PESANAN SIAP AMBIL
                 const doneList = document.getElementById('done-list');
                 if (!data.selesai || data.selesai.length === 0) {
                     doneList.innerHTML = '<div class="empty-state">Belum ada pesanan yang siap.</div>';
                 } else {
-                    doneList.innerHTML = data.selesai.map((o) => `
+                    doneList.innerHTML = data.selesai.map((o) => {
+                        const displayId = o.id ? String(o.id).slice(-3) : '000';
+                        return `
                         <div class="q-item" style="border-left: 5px solid var(--success);">
                             <div class="q-id-box" style="background:#555;">
                                 <small>ID</small>
-                                <span>${String(o.id).slice(-3)}</span>
+                                <span>${displayId}</span>
                             </div>
                             <div class="info">
-                                <b>${o.item}</b>
+                                <b>${o.item || 'Menu'}</b>
                                 <small style="color: var(--success); font-weight:bold;">Selesai - Siap Diambil</small>
                             </div>
                             <div class="btn-group">
                                 <button onclick="deletePermanent('${o.id}')" class="btn btn-del">HAPUS</button>
                             </div>
-                        </div>`).join('');
+                        </div>`;
+                    }).join('');
                 }
-            } catch(e) { console.error("Refresh error:", e); }
-        }
-
-        async function prosesPesanan(id, namaItem) {
-            const { value: menit } = await Swal.fire({
-                title: 'Estimasi Waktu',
-                text: `Berapa lama proses: ${namaItem}?`,
-                input: 'number',
-                inputValue: 8,
-                showCancelButton: true,
-                confirmButtonText: 'Mulai',
-                confirmButtonColor: '#e67e22'
-            });
-            if (menit) {
-                await fetch('/selesai', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: parseInt(id), estimasi_kustom: parseInt(menit), status_proses: true })
-                });
-                refresh();
+            } catch(e) { 
+                console.error("Gagal sinkronisasi data dari client/server:", e); 
             }
         }
 
+        // Fungsi Aksi: Mengubah Status Pesanan ke Tahap Pengaturan Estimasi Masak
+        async function prosesPesanan(id, namaItem) {
+            const { value: menit } = await Swal.fire({
+                title: 'Estimasi Waktu',
+                text: `Berapa lama proses memasak: ${namaItem}?`,
+                input: 'number',
+                inputValue: 8,
+                showCancelButton: true,
+                confirmButtonText: 'Mulai Masak',
+                confirmButtonColor: '#e67e22'
+            });
+            
+            if (menit) {
+                try {
+                    await fetch('/selesai', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: parseInt(id), estimasi_kustom: parseInt(menit), status_proses: true })
+                    });
+                    refresh();
+                } catch(err) { console.error(err); }
+            }
+        }
+
+        // Fungsi Aksi: Menandai Pesanan telah Selesai dan Memindahkannya ke Sektor "Siap Diambil"
         async function tandaiSelesai(id) {
             const result = await Swal.fire({
-                title: 'Konfirmasi',
-                text: 'Pindahkan pesanan ke daftar "Siap Diambil"?',
+                title: 'Konfirmasi Selesai',
+                text: 'Pindahkan pesanan ke daftar "Siap Diambil" pelanggan?',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Ya, Selesai',
@@ -261,26 +281,31 @@
             });
 
             if (result.isConfirmed) {
-                await fetch('/selesai', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ id: parseInt(id), final_selesai: true })
-                });
-                delete callCounters[id];
-                localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
-                refresh();
+                try {
+                    await fetch('/selesai', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: parseInt(id), final_selesai: true })
+                    });
+                    delete callCounters[id];
+                    localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
+                    refresh();
+                } catch(err) { console.error(err); }
             }
         }
 
-        async function callCustomer(event, order) {
+        // Fungsi Aksi: Memanggil Pelanggan (Menyampaikan sinyal panggil ke monitor client/index)
+        async function callCustomer(event, encodedOrder) {
+            const order = JSON.parse(decodeURIComponent(encodedOrder));
             const btn = event.currentTarget; 
             let userConfirm = false;
             const currentCalls = callCounters[order.id] || 0;
 
+            // Logika Re-konfirmasi jika dipanggil lebih dari 2 kali
             if (currentCalls >= 2) {
                 const reconfirm = await Swal.fire({
                     title: 'Panggil lagi?',
-                    text: `Pelanggan ini sudah dipanggil ${currentCalls} kali. Tetap panggil?`,
+                    text: `Pelanggan ini sudah dipanggil ${currentCalls} kali. Tetap lakukan panggilan ulang?`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Ya, Panggil Lagi',
@@ -291,16 +316,16 @@
                 
                 if (!reconfirm.isConfirmed) return; 
             }
-            // ----------------------------------------------
 
+            // Peringatan jika admin belum mengatur estimasi menit memasak
             if (!order.estimasi_kustom) {
                 const result = await Swal.fire({
                     title: 'Estimasi Belum Diatur',
-                    text: 'Silahkan atur waktu estimasi sebelum memanggil!',
+                    text: 'Silahkan atur perkiraan waktu selesai masak sebelum memanggil!',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonText: 'Panggil Saja',
-                    cancelButtonText: 'Atur Estimasi',
+                    cancelButtonText: 'Atur Waktu Dulu',
                     confirmButtonColor: '#f39c12'
                 });
                 if (result.isConfirmed) userConfirm = true;
@@ -315,12 +340,13 @@
             if (userConfirm) {
                 try {
                     btn.disabled = true;
+                    const originalHTML = btn.innerHTML;
                     btn.innerHTML = "⏳";
 
                     await fetch('/panggil', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ id: order.id })
+                        body: JSON.stringify({ id: parseInt(order.id) })
                     });
                     
                     callCounters[order.id] = (callCounters[order.id] || 0) + 1;
@@ -328,26 +354,37 @@
                     refresh();
                 } catch (err) {
                     btn.disabled = false;
-                    btn.innerHTML = "📢";
-                    console.error(err);
+                    console.error("Gagal melakukan aksi panggilan:", err);
                 }
             }
         }
 
+        // Fungsi Aksi: Menghapus Data Secara Permanen dari Database Sementara Sektor Selesai
         async function deletePermanent(id) {
-            const result = await Swal.fire({ title: 'Hapus data?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#e74c3c' });
+            const result = await Swal.fire({ 
+                title: 'Hapus data pesanan?', 
+                text: 'Data yang dihapus tidak dapat dipulihkan di monitor dashboard.',
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#e74c3c',
+                confirmButtonText: 'Ya, Hapus'
+            });
+            
             if (result.isConfirmed) {
-                await fetch('/delete_permanent', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id: parseInt(id)})
-                });
-                delete callCounters[id];
-                localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
-                refresh();
+                try {
+                    await fetch('/delete_permanent', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: parseInt(id) })
+                    });
+                    delete callCounters[id];
+                    localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
+                    refresh();
+                } catch(err) { console.error(err); }
             }
         }
 
+        // Fungsi Aksi: Mengosongkan Seluruh Konten di List "Siap Diambil" sekaligus
         async function clearAllDone() {
             try {
                 const res = await fetch('/monitor?t=' + Date.now());
@@ -356,7 +393,7 @@
                 if (!data.selesai || data.selesai.length === 0) {
                     Swal.fire({
                         title: 'Informasi',
-                        text: 'Belum ada pesanan yang sudah selesai.',
+                        text: 'Belum ada antrian berstatus selesai di sistem saat ini.',
                         icon: 'info',
                         confirmButtonColor: '#3498db'
                     });
@@ -365,10 +402,10 @@
 
                 const result = await Swal.fire({ 
                     title: 'Bersihkan semua?', 
-                    text: "Semua pesanan yang sudah siap akan dihapus permanen.",
+                    text: "Semua pesanan yang telah berstatus siap ambil akan dihapus secara massal dari list monitor.",
                     icon: 'warning', 
                     showCancelButton: true,
-                    confirmButtonText: 'Ya, Kosongkan',
+                    confirmButtonText: 'Ya, Bersihkan Semua',
                     confirmButtonColor: '#e74c3c'
                 });
 
@@ -376,11 +413,14 @@
                     await fetch('/clear_all_done', { method: 'POST' });
                     refresh();
                 }
-            } catch (e) { console.error("Clear error:", e); }
+            } catch (e) { console.error("Gagal melakukan pembersihan massal:", e); }
         }
 
+        // Polling Interaktif Otomatis sinkronisasi data per 5 detik
         setInterval(refresh, 5000);
-        refresh();
+        
+        // Memuat pertama kali saat halaman diakses admin café
+        document.addEventListener('DOMContentLoaded', refresh);
     </script>
 </body>
 </html>
