@@ -21,6 +21,7 @@
         }
 
         /* --- UI COMPONENTS --- */
+        /* Mengatur style komponen utama UI seperti navbar dan container utama */
         .navbar { 
             background: var(--primary); color: var(--white); 
             padding: 30px 20px 60px; text-align: center;
@@ -102,6 +103,7 @@
         }
 
         /* --- CART & FORM --- */
+        /* Mengatur style komponen keranjang belanja, form opsi pesanan, tombol, dan status badge */
         #cart-list { max-height: 200px; overflow-y: auto; margin-bottom: 10px; }
         .cart-item { 
             display: flex; justify-content: space-between; align-items: center;
@@ -405,6 +407,7 @@
         }
 
         /* --- SINKRONISASI PEMBATALAN PESANAN SISI USER --- */
+        /* Fungsi untuk melakukan request pembatalan pesanan aktif ke server dan menghapus id dari localStorage user */
         async function cancelOrder(orderId) {
             const resultConfirm = await Swal.fire({
                 title: 'Batalkan Pesanan?',
@@ -445,6 +448,8 @@
             }
         }
 
+        /* --- MONITOR STATUS DAN PANGGILAN AUDIO --- */
+        /* Blok di bawah ini bertugas memantau status antrian secara real-time dan memicu panggilan teks-ke-suara ketika pesanan selesai */
         async function updateStatusPesanan() {
             if (myOrderIds.length === 0) {
                 document.getElementById('order-status-container').innerHTML = '';
