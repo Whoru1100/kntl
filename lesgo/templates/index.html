@@ -163,6 +163,12 @@
             cursor: pointer; margin-top: 8px; transition: 0.2s; display: inline-block;
         }
         .btn-cancel-order:active { background: rgba(231, 76, 60, 0.1); }
+        
+        .no-cancel-text {
+            font-size: 0.65rem; color: var(--danger); font-weight: 600;
+            text-align: right; margin-top: 5px; line-height: 1.2;
+            white-space: nowrap; /* Menjaga teks agar tetap satu baris horizontal */
+        }
 
         .tag-ojol {
             display: inline-block; margin-top: 4px; font-size: 0.65rem; font-weight: bold;
@@ -283,28 +289,23 @@
         let audioPlayer = new Audio();
         let lastCallTimestamp = Number(localStorage.getItem('last_call_time')) || 0; 
         let isCalling = false; 
+        let currentActiveOrders = []; 
 
-        /* --- FUNGSI DETEKSI INPUT (FORM DIRTY) --- */
         function isFormDirty() {
             const asalSelect = document.getElementById('asal');
             const asalValue = asalSelect ? asalSelect.value : "";
-            // Mengembalikan true jika keranjang tidak kosong ATAU opsi pesanan sudah dipilih
             return (cart.length > 0 || asalValue !== "");
         }
 
-        /* --- LOGIKA PENGAMAN RELOAD & TOMBOL BACK --- */
-        // 1. Menangani reload / refresh / close tab browser
         window.addEventListener('beforeunload', function (e) {
             if (isFormDirty()) {
                 e.preventDefault();
-                // Beberapa browser modern mengabaikan teks kustom ini dan menggunakan pesan bawaan mereka
                 const msg = "Anda sedang memilih menu atau opsi pilihan pesanan. Yakin mau kembali/reload?";
                 e.returnValue = msg;
                 return msg;
             }
         });
 
-        // 2. Menghandle tombol Back Browser
         function initBackGuard() {
             if (window.history.state !== 'app-running') {
                 window.history.pushState('app-running', null, '');
@@ -313,7 +314,6 @@
 
         window.addEventListener('popstate', async function (e) {
             if (isFormDirty()) {
-                // Dorong kembali state ke history agar tidak langsung keluar halaman
                 window.history.pushState('app-running', null, '');
 
                 const result = await Swal.fire({
@@ -328,13 +328,12 @@
                 });
 
                 if (result.isConfirmed) {
-                    // Kosongkan form agar trigger beforeunload terlewati
                     cart = [];
                     if(document.getElementById('asal')) document.getElementById('asal').value = "";
-                    window.history.go(-2); // Mundur keluar halaman
+                    window.history.go(-2); 
                 }
             } else {
-                window.history.go(-1); // Navigasi back normal jika form kosong
+                window.history.go(-1); 
             }
         });
 
@@ -360,7 +359,7 @@
             audioPlayer.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
             audioPlayer.play().catch(e => {});
             document.getElementById('login-screen').style.display = 'none';
-            initBackGuard(); // Aktifkan penjaga tombol back setelah menekan MULAI PESAN
+            initBackGuard(); 
             updateStatusPesanan();
         }
 
@@ -459,8 +458,19 @@
             }
         }
 
-        /* --- SINKRONISASI PEMBATALAN PESANAN SISI USER (LOGIKA ALASAN DIHAPUS) --- */
         async function cancelOrder(orderId) {
+            const orderDiSistem = currentActiveOrders.find(o => String(o.id) === String(orderId));
+            
+            if (orderDiSistem && orderDiSistem.estimasi_kustom) {
+                Swal.fire({
+                    title: 'Gagal Membatalkan',
+                    text: 'Pesanan ini tidak bisa dibatalkan.',
+                    icon: 'error',
+                    confirmButtonColor: '#6F4E37'
+                });
+                return;
+            }
+
             const resultConfirm = await Swal.fire({
                 title: 'Batalkan Pesanan?',
                 text: "Pesanan ini akan dihapus dari antrian.",
@@ -500,7 +510,6 @@
             }
         }
 
-        /* --- MONITOR STATUS DAN PANGGILAN AUDIO --- */
         async function updateStatusPesanan() {
             if (myOrderIds.length === 0) {
                 document.getElementById('order-status-container').innerHTML = '';
@@ -516,6 +525,8 @@
                 const data = await resMonitor.json();
                 const dataPanggil = await resPanggil.json();
                 const container = document.getElementById('order-status-container');
+                
+                currentActiveOrders = data.antrian || [];
                 
                 let htmlContent = ""; 
                 let listTampil = [];
@@ -563,10 +574,15 @@
                     listTampil.forEach(item => {
                         const priorityLabel = (item.data.asal === 'Ojol') ? '<div class="tag-ojol">Prioritas Driver Ojek Online</div>' : '';
                         let estimasiTxt = "";
+                        let actionAreaHtml = ""; 
+                        let statusSideInfoHtml = ""; 
                         
-                        let cancelBtnHtml = "";
                         if (item.label === "SEDANG PROSES") {
-                            cancelBtnHtml = `<br><button class="btn-cancel-order" onclick="cancelOrder('${item.data.id}')">❌ Batalkan Pesanan</button>`;
+                            if (item.data.estimasi_kustom) {
+                                statusSideInfoHtml = `<div class="no-cancel-text">Tidak bisa dibatalkan</div>`;
+                            } else {
+                                actionAreaHtml = `<br><button class="btn-cancel-order" onclick="cancelOrder('${item.data.id}')">❌ Batalkan Pesanan</button>`;
+                            }
                         }
                         
                         if (item.label !== "SIAP AMBIL") {
@@ -577,14 +593,17 @@
                         }
 
                         htmlContent += `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #eee;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:12px 0; border-bottom:1px solid #eee;">
                             <div>
                                 <b style="font-size:0.8rem;">#${String(item.data.id).slice(-3)}</b>
                                 <div style="font-size:0.75rem; color:#666; max-width:180px;">${item.data.item}</div>
                                 ${priorityLabel}${estimasiTxt}
-                                ${cancelBtnHtml}
+                                ${actionAreaHtml}
                             </div>
-                            <span class="status-badge" style="background:${item.bg}; color:${item.warna};">${item.label}</span>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                                <span class="status-badge" style="background:${item.bg}; color:${item.warna};">${item.label}</span>
+                                ${statusSideInfoHtml}
+                            </div>
                         </div>`;
                     });
                     container.innerHTML = `<div class="card" style="border-top: 4px solid var(--accent);"><h3>📋 Status Pesanan</h3>${htmlContent}</div>`;
