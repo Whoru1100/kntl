@@ -120,6 +120,15 @@
         /* Desain tombol panggil berbentuk bulat oranye */
         .btn-call { background: var(--accent); color: white; width: 45px; height: 45px; font-size: 1.2rem; padding: 0; position: relative; }
         
+        /* State khusus saat tombol panggil dinonaktifkan (karena ada pesanan lain yang sedang dipanggil) */
+        .btn-call:disabled {
+            background: #dcdde1 !important;
+            color: #7f8c8d !important;
+            border: 1px solid #b2bec3;
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         /* Badge merah kecil di atas tombol panggil untuk menunjukkan sudah berapa kali dipanggil (misal: 2x) */
         .call-badge { 
             position: absolute; top: -5px; right: -5px; background: var(--error); color: white; 
@@ -190,10 +199,21 @@
         // Fungsi Sinkronisasi Data dari Server Backend: Mengambil data terbaru dan me-render list HTML secara dinamis
         async function refresh() {
             try {
-                // Request data ke endpoint server dengan pencegahan caching internal browser (?t=Timestamp)
-                const res = await fetch('/monitor?t=' + Date.now());
-                const data = await res.json();
+                // Request data antrian dan status panggilan secara bersamaan dengan anti-cache (?t=Timestamp)
+                const ts = Date.now();
+                const [resMonitor, resPanggil] = await Promise.all([
+                    fetch(`/monitor?t=${ts}`),
+                    fetch(`/cek_panggilan?t=${ts}`)
+                ]);
+
+                const data = await resMonitor.json();
+                const dataPanggil = await resPanggil.json();
                 
+                // VALIDASI KETAT: Hanya set ID jika panggil_id benar-benar valid (bukan null, bukan 0, bukan string kosong)
+                const idSedangDipanggil = (dataPanggil && dataPanggil.panggil_id && dataPanggil.panggil_id !== "0" && dataPanggil.panggil_id !== 0) 
+                    ? String(dataPanggil.panggil_id) 
+                    : null;
+
                 // Menyuntikkan total angka antrian ke element dashboard atas kartu statistik
                 document.getElementById('count-active').innerText = data.antrian ? data.antrian.length : 0;
                 document.getElementById('count-done').innerText = data.selesai ? data.selesai.length : 0;
@@ -205,14 +225,26 @@
                 } else {
                     list.innerHTML = data.antrian.map((o, idx) => {
                         const callNum = callCounters[o.id] || 0;
-                        
-                        // Memotong string ID unik agar hanya tampil 3 karakter terakhir saja supaya bersih
                         const displayId = o.id ? String(o.id).slice(-3) : '000';
-                        // Meng-encode objek data pesanan agar aman dikirim via argumen fungsi HTML onclick
                         const itemObj = encodeURIComponent(JSON.stringify(o));
+                        const currentIdStr = String(o.id);
+
+                        // LOGIKA INTERLOCK TOMBOL PANGGIL:
+                        let isCallDisabled = false;
+                        let callButtonContent = `📢 ${callNum > 0 ? `<span class="call-badge">${callNum}x</span>` : ''}`;
+
+                        if (idSedangDipanggil !== null) {
+                            if (idSedangDipanggil === currentIdStr) {
+                                // Jika pesanan ini yang sedang dipanggil oleh kasir, ubah icon jadi Loading/Jam Pasir
+                                callButtonContent = `⏳`; 
+                            } else {
+                                // Jika pesanan LAIN yang dipanggil, kunci tombol panggil pesanan ini
+                                isCallDisabled = true;
+                            }
+                        }
 
                         return `
-                        <div class="q-item">
+                        <div class="q-item" style="${idSedangDipanggil === currentIdStr ? 'border-left: 5px solid var(--accent); background: #fffdf9;' : ''}">
                             <div class="list-number-wrapper">
                                 <div class="list-number-label">Antrian #</div>
                                 <div class="list-number-value">${idx + 1}</div>
@@ -224,13 +256,13 @@
                             <div class="info">
                                 <b>${o.item || 'Menu Unik'}</b>
                                 <small>📍 ${o.asal || 'Meja/Takeaway'} • 🕒 ${o.waktu || 'Baru'}</small>
-                                <span class="status-tag" style="background:${o.estimasi_kustom ? '#fff3e0' : '#f0f0f0'}; color:${o.estimasi_kustom ? '#e67e22' : '#888'}">
-                                    ${o.estimasi_kustom ? '🔥 Proses (' + o.estimasi_kustom + 'm)' : '⏳ Menunggu'}
+                                <span class="status-tag" style="background:${idSedangDipanggil === currentIdStr ? 'var(--accent)' : (o.estimasi_kustom ? '#fff3e0' : '#f0f0f0')}; color:${idSedangDipanggil === currentIdStr ? '#fff' : (o.estimasi_kustom ? '#e67e22' : '#888')}">
+                                    ${idSedangDipanggil === currentIdStr ? '📢 SEDANG DIPANGGIL KASIR' : (o.estimasi_kustom ? '🔥 Proses (' + o.estimasi_kustom + 'm)' : '⏳ Menunggu')}
                                 </span>
                             </div>
                             <div class="btn-group">
-                                <button onclick="callCustomer(event, '${itemObj}')" class="btn btn-call" title="Panggil Pelanggan">
-                                    📢 ${callNum > 0 ? `<span class="call-badge">${callNum}x</span>` : ''}
+                                <button onclick="callCustomer(event, '${itemObj}')" class="btn btn-call" title="Panggil Pelanggan" ${isCallDisabled ? 'disabled' : ''}>
+                                    ${callButtonContent}
                                 </button>
                                 <button onclick="prosesPesanan('${o.id}', '${o.item ? o.item.replace(/'/g, "\\'") : 'Item'}')" class="btn btn-process">
                                     ${o.estimasi_kustom ? 'EDIT WAKTU' : 'MASAK'}
@@ -241,7 +273,7 @@
                     }).join('');
                 }
 
-                // 2. RENDER LIST PESANAN SIAP AMBIL (Sektor bawah setelah tombol selesai dipicu)
+                // 2. RENDER LIST PESANAN SIAP AMBIL
                 const doneList = document.getElementById('done-list');
                 if (!data.selesai || data.selesai.length === 0) {
                     doneList.innerHTML = '<div class="empty-state">Belum ada pesanan yang siap.</div>';
@@ -269,7 +301,7 @@
             }
         }
 
-        // Fungsi Aksi: Menampilkan Pop-Up Input Angka Estimasi Waktu Memasak untuk Dikirimkan ke Server Backend
+        // Fungsi Aksi: Menampilkan Pop-Up Input Angka Estimasi Waktu Memasak
         async function prosesPesanan(id, namaItem) {
             const { value: menit } = await Swal.fire({
                 title: 'Estimasi Waktu',
@@ -293,7 +325,7 @@
             }
         }
 
-        // Fungsi Aksi: Mengubah Status Pesanan di Database Menjadi Selesai Sehingga Pindah Sektor ke List Siap Diambil
+        // Fungsi Aksi: Mengubah Status Pesanan di Database Menjadi Selesai (Masuk kolom Siap Ambil)
         async function tandaiSelesai(id) {
             const result = await Swal.fire({
                 title: 'Konfirmasi Selesai',
@@ -307,12 +339,20 @@
 
             if (result.isConfirmed) {
                 try {
+                    // 1. Pindahkan status pesanan menjadi selesai di database
                     await fetch('/selesai', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ id: parseInt(id), final_selesai: true })
                     });
-                    // Menghapus counter panggil dari memory local storage karena pesanan sudah rampung
+
+                    // 2. PEMBERSIHAN SINYAL PANGGILAN: Kirim ID 0 agar interlock terlepas di backend dan pesanan lain terbuka kembali
+                    await fetch('/panggil', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ id: 0 })
+                    });
+
                     delete callCounters[id];
                     localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
                     refresh();
@@ -320,14 +360,13 @@
             }
         }
 
-        // Fungsi Aksi: Memicu Tombol Panggil Suara/Sinyal Monitor Utama Client dan Menghitung Jumlah Berapa Kali Dipanggil
+        // Fungsi Aksi: Memicu Tombol Panggil Suara/Sinyal Monitor Utama Client
         async function callCustomer(event, encodedOrder) {
             const order = JSON.parse(decodeURIComponent(encodedOrder));
             const btn = event.currentTarget; 
             let userConfirm = false;
             const currentCalls = callCounters[order.id] || 0;
 
-            // Logika Proteksi: Jika admin memanggil customer yang sama > 2 kali, munculkan konfirmasi ulang
             if (currentCalls >= 2) {
                 const reconfirm = await Swal.fire({
                     title: 'Panggil lagi?',
@@ -339,11 +378,9 @@
                     confirmButtonColor: '#f39c12',
                     cancelButtonColor: '#7f8c8d'
                 });
-                
                 if (!reconfirm.isConfirmed) return; 
             }
 
-            // Logika Proteksi: Peringatan jika admin nekat memanggil pembeli padahal belum input estimasi waktu masak
             if (!order.estimasi_kustom) {
                 const result = await Swal.fire({
                     title: 'Estimasi Belum Diatur',
@@ -363,11 +400,9 @@
                 userConfirm = true;
             }
 
-            // Eksekusi pengiriman sinyal panggil ke server
             if (userConfirm) {
                 try {
                     btn.disabled = true;
-                    const originalHTML = btn.innerHTML;
                     btn.innerHTML = "⏳";
 
                     await fetch('/panggil', {
@@ -376,7 +411,6 @@
                         body: JSON.stringify({ id: parseInt(order.id) })
                     });
                     
-                    // Increment +1 nilai jumlah pemanggilan ke dalam cache lokal browser
                     callCounters[order.id] = (callCounters[order.id] || 0) + 1;
                     localStorage.setItem('cafe_fairuz_calls', JSON.stringify(callCounters));
                     refresh();
@@ -387,7 +421,7 @@
             }
         }
 
-        // Fungsi Aksi: Menghapus Satu Pesanan Tertentu Secara Permanen dari Database Sektor Siap Diambil
+        // Fungsi Aksi: Menghapus Satu Pesanan Tertentu Secara Permanen
         async function deletePermanent(id) {
             const result = await Swal.fire({ 
                 title: 'Hapus data pesanan?', 
@@ -412,7 +446,7 @@
             }
         }
 
-        // Fungsi Aksi: Menghapus Massal Seluruh Konten Pesanan Selesai untuk Membersihkan Layar Dashboard Admin
+        // Fungsi Aksi: Menghapus Massal Seluruh Konten Pesanan Selesai
         async function clearAllDone() {
             try {
                 const res = await fetch('/monitor?t=' + Date.now());
@@ -432,7 +466,7 @@
                     title: 'Bersihkan semua?', 
                     text: "Semua pesanan yang telah berstatus siap ambil akan dihapus secara massal dari list monitor.",
                     icon: 'warning', 
-                    showCancelButton: true,
+                    showCancelButton: true, 
                     confirmButtonText: 'Ya, Bersihkan Semua',
                     confirmButtonColor: '#e74c3c'
                 });
@@ -444,10 +478,10 @@
             } catch (e) { console.error("Gagal melakukan pembersihan massal:", e); }
         }
 
-        // Real-Time Polling: Secara otomatis mengeksekusi fungsi refresh data tiap 5 detik sekali ke server tanpa reload page
+        // Real-Time Polling: Setiap 5 detik otomatis mengambil data terbaru dari server
         setInterval(refresh, 5000);
         
-        // Memuat data pertama kali ketika file HTML ini selesai dimuat seutuhnya oleh browser admin
+        // Jalankan sinkronisasi pertama kali saat browser selesai me-load halaman web
         document.addEventListener('DOMContentLoaded', refresh);
     </script>
 </body>
